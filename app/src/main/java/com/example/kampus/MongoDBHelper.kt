@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import com.example.kampus.models.AdminUser
 import com.example.kampus.models.ChatMessage
 import com.example.kampus.models.CollegeEvent
 import com.example.kampus.models.DeviceFcmToken
@@ -32,50 +33,111 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bson.Document
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
+import com.mongodb.ReadPreference
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
 
 object MongoDBHelper {
-    private const val DB_NAME = "Kampus"
-    // Using direct cluster connection string with SSL and replica set for universal Android runtime compatibility
-    private const val CONNECTION_URI =
-        "mongodb://godfreytrprof_db_user:6JjxTbgSJbzjBkv4@ac-vyntutv-shard-00-00.rbxbuxe.mongodb.net:27017,ac-vyntutv-shard-00-01.rbxbuxe.mongodb.net:27017,ac-vyntutv-shard-00-02.rbxbuxe.mongodb.net:27017/Kampus?ssl=true&replicaSet=atlas-vyntutv-shard-0&authSource=admin&retryWrites=true&w=majority"
+    private val DB_NAME: String = BuildConfig.MONGODB_DATABASE.ifBlank { "Kampus" }
+    private val CONNECTION_URI: String = BuildConfig.MONGODB_URI.ifBlank {
+        BuildConfig.MONGODB_FALLBACK_URI
+    }
 
     private val gson = Gson()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.IO + Job())
 
+    @Volatile
     private var mongoClient: MongoClient? = null
+    @Volatile
     private var database: MongoDatabase? = null
 
     init {
-        try {
-            val settings = MongoClientSettings.builder()
-                .applyConnectionString(ConnectionString(CONNECTION_URI))
-                .applyToSocketSettings { builder ->
-                    builder.connectTimeout(15, TimeUnit.SECONDS)
-                    builder.readTimeout(15, TimeUnit.SECONDS)
-                }
-                .build()
-            mongoClient = MongoClients.create(settings)
-            database = mongoClient?.getDatabase(DB_NAME)
-        } catch (_: Exception) {}
+        scope.launch(Dispatchers.IO) {
+            getDb()
+        }
     }
 
-    private fun getDb(): MongoDatabase? {
-        if (database == null) {
-            try {
-                val settings = MongoClientSettings.builder()
-                    .applyConnectionString(ConnectionString(CONNECTION_URI))
-                    .build()
-                mongoClient = MongoClients.create(settings)
-                database = mongoClient?.getDatabase(DB_NAME)
-            } catch (_: Exception) {}
+    private fun buildClientSettings(uriStr: String): MongoClientSettings {
+        val sslContext = try {
+            SSLContext.getDefault()
+        } catch (_: Throwable) {
+            null
         }
-        return database
+
+        return MongoClientSettings.builder()
+            .applyConnectionString(ConnectionString(uriStr))
+            .readPreference(ReadPreference.primaryPreferred())
+            .applyToClusterSettings { builder ->
+                builder.serverSelectionTimeout(12, TimeUnit.SECONDS)
+            }
+            .applyToSocketSettings { builder ->
+                builder.connectTimeout(12, TimeUnit.SECONDS)
+                builder.readTimeout(15, TimeUnit.SECONDS)
+            }
+            .applyToConnectionPoolSettings { builder ->
+                builder.minSize(1)
+                builder.maxSize(15)
+                builder.maxWaitTime(12, TimeUnit.SECONDS)
+                builder.maxConnectionIdleTime(60, TimeUnit.SECONDS)
+                builder.maxConnectionLifeTime(10, TimeUnit.MINUTES)
+            }
+            .applyToServerSettings { builder ->
+                builder.heartbeatFrequency(10, TimeUnit.SECONDS)
+                builder.minHeartbeatFrequency(500, TimeUnit.MILLISECONDS)
+            }
+            .applyToSslSettings { builder ->
+                builder.enabled(true)
+                if (sslContext != null) {
+                    builder.context(sslContext)
+                }
+                builder.invalidHostNameAllowed(true)
+            }
+            .build()
+    }
+
+    @Synchronized
+    fun getDb(): MongoDatabase? {
+        if (database != null) return database
+
+        return try {
+            val settings = buildClientSettings(CONNECTION_URI)
+            val client = MongoClients.create(settings)
+            val db = client.getDatabase(DB_NAME)
+            mongoClient = client
+            database = db
+            db
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Resets the MongoDB client and reconnects (useful when device switches between Wi-Fi and Mobile Data).
+     */
+    @Synchronized
+    fun resetConnection() {
+        try {
+            mongoClient?.close()
+        } catch (_: Throwable) {}
+        mongoClient = null
+        database = null
+        scope.launch(Dispatchers.IO) {
+            getDb()
+        }
+    }
+
+    fun prewarmConnection() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                getDb()?.runCommand(Document("ping", 1))
+            } catch (_: Throwable) {}
+        }
     }
 
     private fun getCollection(name: String): MongoCollection<Document>? {
@@ -201,7 +263,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(5000)
             }
         }
     }
@@ -235,7 +297,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(5000)
             }
         }
     }
@@ -332,7 +394,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(8000)
             }
         }
     }
@@ -365,7 +427,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(8000)
             }
         }
     }
@@ -411,7 +473,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(5000)
             }
         }
     }
@@ -444,7 +506,7 @@ object MongoDBHelper {
                     }
                     mainHandler.post { onDataChanged(list) }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(5000)
             }
         }
     }
@@ -515,6 +577,133 @@ object MongoDBHelper {
                     }
                 } catch (_: Exception) {}
                 delay(2000)
+            }
+        }
+    }
+
+    // --- 🔐 DYNAMIC MONGODB AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC) ---
+
+    /**
+     * Authenticates Super Admin credentials dynamically against the MongoDB 'admins' collection.
+     */
+    fun authenticateSuperAdmin(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        val safeEmail = email.trim().lowercase()
+        scope.launch {
+            try {
+                withTimeoutOrNull(4000L) {
+                    val col = getCollection("admins")
+                    if (col == null) {
+                        mainHandler.post { onResult(false, "Database connection unavailable. Please check network/Atlas access.") }
+                        return@withTimeoutOrNull
+                    }
+                    val adminDoc = col.find(
+                        Filters.or(
+                            Filters.eq("_id", safeEmail),
+                            Filters.eq("email", safeEmail)
+                        )
+                    ).firstOrNull()
+
+                    if (adminDoc != null) {
+                        val dbPassword = adminDoc.getString("password") ?: ""
+                        val dbRole = adminDoc.getString("role") ?: "SUPER_ADMIN"
+                        if (dbPassword == password && (dbRole.equals("SUPER_ADMIN", ignoreCase = true) || dbRole.equals("ADMIN", ignoreCase = true))) {
+                            mainHandler.post { onResult(true, null) }
+                            return@withTimeoutOrNull
+                        } else {
+                            mainHandler.post { onResult(false, "Invalid Super Admin password") }
+                            return@withTimeoutOrNull
+                        }
+                    }
+                    mainHandler.post { onResult(false, "Super Admin account not found in database") }
+                } ?: run {
+                    mainHandler.post { onResult(false, "Database request timed out (Atlas cluster unreachable).") }
+                }
+            } catch (e: Throwable) {
+                mainHandler.post { onResult(false, e.message ?: "Authentication failed (Timeout)") }
+            }
+        }
+    }
+
+    /**
+     * Authenticates Faculty credentials dynamically against the MongoDB 'college_faculties' collection.
+     */
+    fun authenticateFaculty(email: String, password: String, onResult: (FacultyKYC?, String?) -> Unit) {
+        val safeEmail = email.trim().lowercase()
+        scope.launch {
+            try {
+                withTimeoutOrNull(4000L) {
+                    val col = getCollection("college_faculties")
+                    if (col == null) {
+                        mainHandler.post { onResult(null, "Database connection unavailable. Please check network/Atlas access.") }
+                        return@withTimeoutOrNull
+                    }
+                    val doc = col.find(
+                        Filters.or(
+                            Filters.eq("_id", safeEmail),
+                            Filters.eq("collegeEmail", safeEmail)
+                        )
+                    ).firstOrNull()
+
+                    if (doc != null) {
+                        val dbPassword = doc.getString("password") ?: ""
+                        if (dbPassword == password) {
+                            doc.remove("_id")
+                            val faculty = gson.fromJson(doc.toJson(), FacultyKYC::class.java)
+                            mainHandler.post { onResult(faculty, null) }
+                            return@withTimeoutOrNull
+                        } else {
+                            mainHandler.post { onResult(null, "Incorrect faculty password") }
+                            return@withTimeoutOrNull
+                        }
+                    }
+                    mainHandler.post { onResult(null, "Faculty account not found in database") }
+                } ?: run {
+                    mainHandler.post { onResult(null, "Database request timed out (Atlas cluster unreachable).") }
+                }
+            } catch (e: Throwable) {
+                mainHandler.post { onResult(null, e.message ?: "Authentication failed (Timeout)") }
+            }
+        }
+    }
+
+    /**
+     * Authenticates Student credentials dynamically against the MongoDB 'students' collection.
+     */
+    fun authenticateStudent(email: String, password: String, onResult: (StudentUser?, String?) -> Unit) {
+        val safeEmail = email.trim().lowercase()
+        scope.launch {
+            try {
+                withTimeoutOrNull(4000L) {
+                    val col = getCollection("students")
+                    if (col == null) {
+                        mainHandler.post { onResult(null, "Database connection unavailable. Please check network/Atlas access.") }
+                        return@withTimeoutOrNull
+                    }
+                    val doc = col.find(
+                        Filters.or(
+                            Filters.eq("_id", safeEmail),
+                            Filters.eq("email", safeEmail)
+                        )
+                    ).firstOrNull()
+
+                    if (doc != null) {
+                        val dbPassword = doc.getString("password") ?: ""
+                        if (dbPassword == password) {
+                            doc.remove("_id")
+                            val student = gson.fromJson(doc.toJson(), StudentUser::class.java)
+                            mainHandler.post { onResult(student, null) }
+                            return@withTimeoutOrNull
+                        } else {
+                            mainHandler.post { onResult(null, "Incorrect student password") }
+                            return@withTimeoutOrNull
+                        }
+                    }
+                    mainHandler.post { onResult(null, "Student account not found in database") }
+                } ?: run {
+                    mainHandler.post { onResult(null, "Database request timed out (Atlas cluster unreachable).") }
+                }
+            } catch (e: Throwable) {
+                mainHandler.post { onResult(null, e.message ?: "Authentication failed (Timeout)") }
             }
         }
     }

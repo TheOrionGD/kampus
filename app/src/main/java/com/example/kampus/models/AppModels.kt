@@ -36,6 +36,15 @@ enum class FacultyRole {
     DEPT_FACULTY    // Verified by College Admin; Posts Department Events
 }
 
+data class AdminUser(
+    val email: String,
+    val name: String = "Super Administrator",
+    val role: String = "SUPER_ADMIN",
+    val password: String = ""
+) {
+    constructor() : this("")
+}
+
 data class StudentUser(
     val name: String,
     val email: String,
@@ -232,6 +241,8 @@ data class ChatMessage(
 }
 
 enum class ScreenRoute {
+    SPLASH,
+    PERMISSIONS,
     LOGIN,
     STUDENT_SETUP,
     FACULTY_KYC,
@@ -249,9 +260,40 @@ class AppDataManager(context: Context) {
     }
 
     fun getStudents(): MutableList<StudentUser> {
-        val json = prefs.getString("students_list", null) ?: return mutableListOf()
-        val type = object : TypeToken<MutableList<StudentUser>>() {}.type
-        return gson.fromJson(json, type) ?: mutableListOf()
+        val json = prefs.getString("students_list", null)
+        if (!json.isNullOrBlank()) {
+            val type = object : TypeToken<MutableList<StudentUser>>() {}.type
+            val list = gson.fromJson<MutableList<StudentUser>>(json, type)
+            if (!list.isNullOrEmpty()) return list
+        }
+        return mutableListOf(
+            StudentUser(
+                name = "Aravind Swaminathan",
+                email = "student1@kampus.edu",
+                password = "student123",
+                college = "Kampus Institute of Technology",
+                department = "Computer Science & Engineering",
+                year = "3rd Year",
+                skills = listOf("Kotlin", "Android", "UI/UX", "Python"),
+                headline = "Android Developer & AI Enthusiast",
+                about = "Passionate CS student competing in hackathons and symposiums.",
+                phoneNumber = "9876543220",
+                isOpenToWork = true
+            ),
+            StudentUser(
+                name = "Priya Natarajan",
+                email = "student2@kampus.edu",
+                password = "student123",
+                college = "Kampus Institute of Technology",
+                department = "Information Technology",
+                year = "Final Year",
+                skills = listOf("React", "Node.js", "Cloud", "Cybersecurity"),
+                headline = "Full-stack Developer & Tech Lead",
+                about = "Building real-world web and mobile applications.",
+                phoneNumber = "9876543221",
+                isOpenToWork = false
+            )
+        )
     }
 
     fun saveFaculties(allFaculties: List<FacultyKYC>) {
@@ -259,9 +301,42 @@ class AppDataManager(context: Context) {
     }
 
     fun getFaculties(): MutableList<FacultyKYC> {
-        val json = prefs.getString("all_faculties_list", null) ?: return mutableListOf()
-        val type = object : TypeToken<MutableList<FacultyKYC>>() {}.type
-        return gson.fromJson(json, type) ?: mutableListOf()
+        val json = prefs.getString("all_faculties_list", null)
+        if (!json.isNullOrBlank()) {
+            val type = object : TypeToken<MutableList<FacultyKYC>>() {}.type
+            val list = gson.fromJson<MutableList<FacultyKYC>>(json, type)
+            if (!list.isNullOrEmpty()) return list
+        }
+        return mutableListOf(
+            FacultyKYC(
+                name = "Dr. Rajesh Kumar",
+                collegeName = "Kampus Institute of Technology",
+                department = "Administration",
+                designation = "Dean / College Admin",
+                collegeEmail = "collegeadmin@kampus.edu",
+                contactNumber = "9876543210",
+                collegeWebsite = "https://kampus.edu",
+                accreditation = "NAAC A++",
+                password = "admin123",
+                role = FacultyRole.COLLEGE_ADMIN,
+                isVerifiedBySuperAdmin = true,
+                isVerifiedByCollegeAdmin = true
+            ),
+            FacultyKYC(
+                name = "Prof. Ananya Sharma",
+                collegeName = "Kampus Institute of Technology",
+                department = "Computer Science & Engineering",
+                designation = "Assistant Professor & Event Convener",
+                collegeEmail = "faculty@kampus.edu",
+                contactNumber = "9876543211",
+                collegeWebsite = "https://kampus.edu",
+                accreditation = "NAAC A++",
+                password = "faculty123",
+                role = FacultyRole.DEPT_FACULTY,
+                isVerifiedBySuperAdmin = true,
+                isVerifiedByCollegeAdmin = true
+            )
+        )
     }
 
     fun saveEvents(list: List<CollegeEvent>) {

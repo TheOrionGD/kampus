@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -72,8 +73,15 @@ fun LoginScreen(
                         modifier = Modifier.size(70.dp),
                         shadowElevation = 8.dp
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("🎓", fontSize = 34.sp)
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(10.dp)) {
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(id = com.example.kampus.R.drawable.app_logo),
+                                contentDescription = "Kampus App Logo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            )
                         }
                     }
                 }
@@ -152,12 +160,12 @@ fun LoginScreen(
 
                     val emailLabel = when (selectedRoleIndex) {
                         0 -> "Student Email"
-                        1 -> "Faculty / Staff Email"
+                        1 -> "Faculty / College Admin Email"
                         else -> "Super Admin Email"
                     }
                     val emailHint = when (selectedRoleIndex) {
-                        0 -> "student@college.ac.in"
-                        1 -> "faculty@college.edu.in"
+                        0 -> "student1@kampus.edu"
+                        1 -> "faculty@kampus.edu / collegeadmin@kampus.edu"
                         else -> "admin@kampus.com"
                     }
 
@@ -231,7 +239,7 @@ fun LoginScreen(
                         Text("Log In ➔", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
                     }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     HorizontalDivider(color = Color(0xFFF1F5F9))
 

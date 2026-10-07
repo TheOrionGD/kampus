@@ -204,7 +204,14 @@ fun SuperAdminScreen(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC)).padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8FAFC))
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(16.dp)
+    ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
                 Text("🛡️ Governance Portal", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))

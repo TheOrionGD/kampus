@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.example.kampus.MongoDBHelper
 import com.example.kampus.models.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -203,18 +204,27 @@ fun FacultyEventPublishScreen(
     var fullScreenImageUri by remember { mutableStateOf<String?>(null) }
 
     val posterPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { savedPosterPath = saveUriToInternalStorage(context, it, "event_poster") }
+        uri?.let {
+            val savedPath = saveUriToInternalStorage(context, it, "event_poster")
+            savedPosterPath = savedPath
+            MongoDBHelper.uploadImageToStorage(context, savedPath, "event_posters") { cloudUrl ->
+                savedPosterPath = cloudUrl
+            }
+        }
     }
 
     val campusBannerPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             val savedPath = saveUriToInternalStorage(context, it, "campus_entrance")
             currentCampusBannerUri = savedPath
-            val updatedFaculty = faculty.copy(collegePhotoUri = savedPath)
-            val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
-            if (idx != -1) allFaculties[idx] = updatedFaculty
-            onUpdateFacultyLayout(updatedFaculty)
-            Toast.makeText(context, "Campus Entrance Photo Updated!", Toast.LENGTH_SHORT).show()
+            MongoDBHelper.uploadImageToStorage(context, savedPath, "campus_banners") { cloudUrl ->
+                currentCampusBannerUri = cloudUrl
+                val updatedFaculty = faculty.copy(collegePhotoUri = cloudUrl)
+                val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
+                if (idx != -1) allFaculties[idx] = updatedFaculty
+                onUpdateFacultyLayout(updatedFaculty)
+                Toast.makeText(context, "Campus Entrance Photo Updated!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -222,11 +232,14 @@ fun FacultyEventPublishScreen(
         uri?.let {
             val savedPath = saveUriToInternalStorage(context, it, "campus_blueprint")
             currentLayoutUri = savedPath
-            val updatedFaculty = faculty.copy(campusLayoutUri = savedPath)
-            val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
-            if (idx != -1) allFaculties[idx] = updatedFaculty
-            onUpdateFacultyLayout(updatedFaculty)
-            Toast.makeText(context, "Campus Blueprint Layout Saved!", Toast.LENGTH_SHORT).show()
+            MongoDBHelper.uploadImageToStorage(context, savedPath, "campus_layouts") { cloudUrl ->
+                currentLayoutUri = cloudUrl
+                val updatedFaculty = faculty.copy(campusLayoutUri = cloudUrl)
+                val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
+                if (idx != -1) allFaculties[idx] = updatedFaculty
+                onUpdateFacultyLayout(updatedFaculty)
+                Toast.makeText(context, "Campus Blueprint Layout Saved!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -268,6 +281,8 @@ fun FacultyEventPublishScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {

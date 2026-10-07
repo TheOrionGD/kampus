@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.kampus.MongoDBHelper
 import com.example.kampus.models.*
 import java.io.File
 import java.io.FileOutputStream
@@ -256,15 +257,33 @@ fun FacultyKYCScreen(
     var idProofUri by remember { mutableStateOf("") }
 
     val idProofPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { idProofUri = saveUriToInternalStorage(context, it, "faculty_id_doc") }
+        uri?.let {
+            val localPath = saveUriToInternalStorage(context, it, "faculty_id_doc")
+            idProofUri = localPath
+            MongoDBHelper.uploadImageToStorage(context, localPath, "faculty_id_proofs") { cloudUrl ->
+                idProofUri = cloudUrl
+            }
+        }
     }
 
     val campusEntrancePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { campusEntranceUri = saveUriToInternalStorage(context, it, "campus_entrance_banner") }
+        uri?.let {
+            val localPath = saveUriToInternalStorage(context, it, "campus_entrance_banner")
+            campusEntranceUri = localPath
+            MongoDBHelper.uploadImageToStorage(context, localPath, "campus_banners") { cloudUrl ->
+                campusEntranceUri = cloudUrl
+            }
+        }
     }
 
     val campusLayoutPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { campusLayoutUri = saveUriToInternalStorage(context, it, "campus_layout_blueprint") }
+        uri?.let {
+            val localPath = saveUriToInternalStorage(context, it, "campus_layout_blueprint")
+            campusLayoutUri = localPath
+            MongoDBHelper.uploadImageToStorage(context, localPath, "campus_layouts") { cloudUrl ->
+                campusLayoutUri = cloudUrl
+            }
+        }
     }
 
     Box(

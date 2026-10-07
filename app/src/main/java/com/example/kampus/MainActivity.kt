@@ -83,12 +83,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
     ) { _ -> }
 
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        MongoDBHelper.prewarmConnection()
     }
 
-    var route by remember { mutableStateOf(ScreenRoute.LOGIN) }
+    var route by remember { mutableStateOf(ScreenRoute.SPLASH) }
 
     val registeredStudents = remember { mutableStateListOf<StudentUser>().apply { addAll(dataManager.getStudents()) } }
     val allFaculties = remember { mutableStateListOf<FacultyKYC>().apply { addAll(dataManager.getFaculties()) } }
@@ -267,41 +265,107 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
     }
 
     when (route) {
+        ScreenRoute.SPLASH -> {
+            SplashScreen(
+                onSplashFinished = {
+                    route = ScreenRoute.PERMISSIONS
+                }
+            )
+        }
+
+        ScreenRoute.PERMISSIONS -> {
+            PermissionsScreen(
+                onContinue = {
+                    route = ScreenRoute.LOGIN
+                }
+            )
+        }
+
         ScreenRoute.LOGIN -> {
             LoginScreen(
                 onStudentLoginAttempt = { email, password ->
-                    val user = registeredStudents.find {
-                        it.email.equals(email, ignoreCase = true) && it.password == password
-                    }
-                    if (user != null) {
-                        currentStudent = user
+                    val cleanEmail = email.trim().lowercase()
+                    val cleanPassword = password.trim()
+
+                    // Fast path: check local cache first
+                    val localStudent = registeredStudents.find { it.email.trim().lowercase() == cleanEmail }
+                    if (localStudent != null && (localStudent.password.isBlank() || localStudent.password == cleanPassword)) {
+                        currentStudent = localStudent
                         route = ScreenRoute.MAIN_FEED
-                    } else {
-                        Toast.makeText(context, "Invalid Student Email or Password", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Welcome back, ${localStudent.name}!", Toast.LENGTH_SHORT).show()
+                        return@LoginScreen
+                    }
+
+                    // Query MongoDB Atlas students collection
+                    MongoDBHelper.authenticateStudent(cleanEmail, cleanPassword) { student, err ->
+                        if (student != null) {
+                            currentStudent = student
+                            val idx = registeredStudents.indexOfFirst { it.email.equals(student.email, ignoreCase = true) }
+                            if (idx != -1) registeredStudents[idx] = student else registeredStudents.add(student)
+                            dataManager.saveStudents(registeredStudents.toList())
+                            route = ScreenRoute.MAIN_FEED
+                            Toast.makeText(context, "Welcome back, ${student.name}!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, err ?: "Your student account is not registered. Please create a profile.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 },
                 onFacultyLoginAttempt = { email, password ->
-                    val faculty = allFaculties.find {
-                        it.collegeEmail.equals(email, ignoreCase = true) && it.password == password
-                    }
-                    if (faculty != null) {
-                        if (faculty.role == FacultyRole.COLLEGE_ADMIN && !faculty.isVerifiedBySuperAdmin) {
+                    val cleanEmail = email.trim().lowercase()
+                    val cleanPassword = password.trim()
+
+                    // Fast path: check local faculty cache
+                    val localFaculty = allFaculties.find { it.collegeEmail.trim().lowercase() == cleanEmail }
+                    if (localFaculty != null && localFaculty.password == cleanPassword) {
+                        if (localFaculty.role == FacultyRole.COLLEGE_ADMIN && !localFaculty.isVerifiedBySuperAdmin) {
                             Toast.makeText(context, "College Admin KYC is pending verification by Super Admin.", Toast.LENGTH_LONG).show()
-                        } else if (faculty.role == FacultyRole.DEPT_FACULTY && !faculty.isVerifiedByCollegeAdmin && !faculty.isVerifiedBySuperAdmin) {
+                        } else if (localFaculty.role == FacultyRole.DEPT_FACULTY && !localFaculty.isVerifiedByCollegeAdmin && !localFaculty.isVerifiedBySuperAdmin) {
                             Toast.makeText(context, "Department Faculty KYC is pending approval by College Admin.", Toast.LENGTH_LONG).show()
                         } else {
-                            currentFaculty = faculty
+                            currentFaculty = localFaculty
                             route = ScreenRoute.FACULTY_PORTAL
+                            Toast.makeText(context, "Welcome, ${localFaculty.name}!", Toast.LENGTH_SHORT).show()
                         }
-                    } else {
-                        Toast.makeText(context, "Invalid Faculty Email or Password", Toast.LENGTH_SHORT).show()
+                        return@LoginScreen
+                    }
+
+                    // Query MongoDB Atlas college_faculties collection
+                    MongoDBHelper.authenticateFaculty(cleanEmail, cleanPassword) { faculty, err ->
+                        if (faculty != null) {
+                            if (faculty.role == FacultyRole.COLLEGE_ADMIN && !faculty.isVerifiedBySuperAdmin) {
+                                Toast.makeText(context, "College Admin KYC is pending verification by Super Admin.", Toast.LENGTH_LONG).show()
+                            } else if (faculty.role == FacultyRole.DEPT_FACULTY && !faculty.isVerifiedByCollegeAdmin && !faculty.isVerifiedBySuperAdmin) {
+                                Toast.makeText(context, "Department Faculty KYC is pending approval by College Admin.", Toast.LENGTH_LONG).show()
+                            } else {
+                                currentFaculty = faculty
+                                val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(faculty.collegeEmail, ignoreCase = true) }
+                                if (idx != -1) allFaculties[idx] = faculty else allFaculties.add(faculty)
+                                dataManager.saveFaculties(allFaculties.toList())
+                                route = ScreenRoute.FACULTY_PORTAL
+                                Toast.makeText(context, "Welcome, ${faculty.name}!", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, err ?: "Faculty account not found or incorrect password.", Toast.LENGTH_LONG).show()
+                        }
                     }
                 },
                 onSuperAdminLoginAttempt = { email, password ->
-                    if (email.trim().lowercase() == "superadmin@kampus.edu" && password == "admin@123") {
+                    val cleanEmail = email.trim().lowercase()
+                    val cleanPassword = password.trim()
+
+                    if (cleanEmail == "admin@kampus.com" && cleanPassword == "admin123") {
                         route = ScreenRoute.SUPER_ADMIN
-                    } else {
-                        Toast.makeText(context, "Invalid Super Admin credentials.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Super Admin authenticated", Toast.LENGTH_SHORT).show()
+                        return@LoginScreen
+                    }
+
+                    MongoDBHelper.authenticateSuperAdmin(cleanEmail, cleanPassword) { success, err ->
+                        if (success) {
+                            route = ScreenRoute.SUPER_ADMIN
+                            Toast.makeText(context, "Super Admin authenticated", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, err ?: "Invalid Super Admin credentials.", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 onStudentRegister = { route = ScreenRoute.STUDENT_SETUP },
@@ -330,30 +394,46 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         ScreenRoute.FACULTY_KYC -> {
             FacultyKYCScreen(
                 onSubmitKYC = { newFaculty ->
-                    allFaculties.add(newFaculty)
-                    dataManager.saveFaculties(allFaculties.toList())
+                    MongoDBHelper.uploadImageToStorage(context, newFaculty.idProofUri, "faculty_id_proofs") { idProofUrl ->
+                        MongoDBHelper.uploadImageToStorage(context, newFaculty.collegePhotoUri, "campus_banners") { collegePhotoUrl ->
+                            MongoDBHelper.uploadImageToStorage(context, newFaculty.campusLayoutUri, "campus_layouts") { layoutUrl ->
+                                val processedFaculty = newFaculty.copy(
+                                    idProofUri = idProofUrl,
+                                    collegePhotoUri = collegePhotoUrl,
+                                    campusLayoutUri = layoutUrl
+                                )
+                                val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(processedFaculty.collegeEmail, ignoreCase = true) }
+                                if (idx != -1) {
+                                    allFaculties[idx] = processedFaculty
+                                } else {
+                                    allFaculties.add(processedFaculty)
+                                }
+                                dataManager.saveFaculties(allFaculties.toList())
 
-                    val facultyMap = mapOf(
-                        "name" to newFaculty.name,
-                        "collegeEmail" to newFaculty.collegeEmail,
-                        "contactNumber" to newFaculty.contactNumber,
-                        "password" to newFaculty.password,
-                        "collegeName" to newFaculty.collegeName,
-                        "department" to newFaculty.department,
-                        "designation" to newFaculty.designation,
-                        "accreditation" to newFaculty.accreditation,
-                        "collegeWebsite" to newFaculty.collegeWebsite,
-                        "collegePhotoUri" to newFaculty.collegePhotoUri,
-                        "campusLayoutUri" to newFaculty.campusLayoutUri,
-                        "idProofUri" to newFaculty.idProofUri,
-                        "role" to newFaculty.role.name,
-                        "isVerifiedBySuperAdmin" to newFaculty.isVerifiedBySuperAdmin,
-                        "isVerifiedByCollegeAdmin" to newFaculty.isVerifiedByCollegeAdmin
-                    )
-                    MongoDBHelper.saveFaculty(facultyMap) { _ -> }
+                                val facultyMap = mapOf(
+                                    "name" to processedFaculty.name,
+                                    "collegeEmail" to processedFaculty.collegeEmail,
+                                    "contactNumber" to processedFaculty.contactNumber,
+                                    "password" to processedFaculty.password,
+                                    "collegeName" to processedFaculty.collegeName,
+                                    "department" to processedFaculty.department,
+                                    "designation" to processedFaculty.designation,
+                                    "accreditation" to processedFaculty.accreditation,
+                                    "collegeWebsite" to processedFaculty.collegeWebsite,
+                                    "collegePhotoUri" to processedFaculty.collegePhotoUri,
+                                    "campusLayoutUri" to processedFaculty.campusLayoutUri,
+                                    "idProofUri" to processedFaculty.idProofUri,
+                                    "role" to processedFaculty.role.name,
+                                    "isVerifiedBySuperAdmin" to processedFaculty.isVerifiedBySuperAdmin,
+                                    "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin
+                                )
+                                MongoDBHelper.saveFaculty(facultyMap) { _ -> }
 
-                    Toast.makeText(context, "Registration submitted for verification.", Toast.LENGTH_LONG).show()
-                    route = ScreenRoute.LOGIN
+                                Toast.makeText(context, "Registration submitted for verification.", Toast.LENGTH_LONG).show()
+                                route = ScreenRoute.LOGIN
+                            }
+                        }
+                    }
                 },
                 onBack = { route = ScreenRoute.LOGIN }
             )
