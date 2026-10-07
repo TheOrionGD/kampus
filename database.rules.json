@@ -1,0 +1,14 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "events": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "tokens": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

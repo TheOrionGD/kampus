@@ -1,0 +1,8 @@
+1. Push Notifications for Event Publishing: When a faculty member publishes an event, every student registered in the app must receive an instant push notification containing the event title, category, registration deadline, event date, and time.
+
+2. Cloud Storage for Images (Local vs. Global): Currently, images (event posters, college photos, profiles, and banners) are stored in local device storage, which is why they disappear when the app is closed or viewed on other devices. All uploaded images must be properly persisted to Database URLs so they render globally for all users opening the app on any phone.(use mongodb for database[atlas-credentials.env](file;file:///o%3A/Kampus/atlas-credentials.env) 
+)
+
+3. Upcoming Deadline Event Filtration: The "Upcoming Deadlines" page incorrectly shows events on their exact deadline or event date (e.g., showing an event on October 7 when its deadline was October 6). Events must be strictly filtered so they automatically stop appearing in the upcoming list once their registration deadline day has passed.
+
+4. Full Student Profile View in Team Finder Chat: When clicking "View Profile" inside the real-time team-finding chat, it currently only displays the student's name. It must be updated to show their full profile details, including participated events and certifications.
