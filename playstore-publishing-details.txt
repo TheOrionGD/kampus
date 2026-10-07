@@ -1,0 +1,194 @@
+GOOGLE PLAY STORE - APPLICATION PUBLISHING DETAILS
+
+SECTION 1 - APPLICATION DETAILS
+
+1. Application Name
+Kampus
+
+2. Package Name / Application ID
+com.example.kampus
+
+3. Application Type
+- App
+
+4. Application Category
+Education
+
+5. Application Pricing
+- Free
+
+6. Tester Email IDs
+godfreytrprof@gmail.com,kampus.tester1@gmail.com,kampus.tester2@gmail.com,kampus.tester3@gmail.com,kampus.tester4@gmail.com,kampus.tester5@gmail.com,kampus.tester6@gmail.com,kampus.tester7@gmail.com,kampus.tester8@gmail.com,kampus.tester9@gmail.com,kampus.tester10@gmail.com,kampus.tester11@gmail.com
+
+
+SECTION 2 - PLAY STORE LISTING
+
+7. Short Description
+Discover inter-college events, track registration deadlines, and build teams.
+
+8. Full Description
+Kampus is the all-in-one inter-college event discovery, deadline management, and student networking platform designed for colleges and universities.
+
+Whether you are looking to participate in hackathons, technical symposiums, cultural fests, sports tournaments, or academic conferences across different campuses, Kampus bridges the gap between students and organizers.
+
+Key Benefits for Students:
+- Explore Verified Events: Access inter-college events organized across multiple universities and institutions with real-time updates.
+- Smart Registration Tracking: Filter events by upcoming deadlines, categories, and eligibility. Events automatically update so you never miss a registration window.
+- Exact Deadline Alarms: Set reminders and receive background notifications on critical registration dates.
+- Real-Time Team Finder: Connect with peers across colleges, discover students with complementary skill sets (coding, design, management), view verified certifications, and chat in real-time to form competitive teams.
+- Student Portfolios: Build your academic profile, showcase your achievements, and share certificates with the campus community.
+
+Key Benefits for Faculty and Organizers:
+- Event Publishing: Publish and manage college events, brochures, and external registration links with instant push notification delivery to all registered students.
+- Campus Management: Maintain college directories, campus maps, department coordinators, and announcements.
+
+9. Main Features
+- Inter-College Event Discovery: Centralized portal displaying technical, cultural, management, and sports events from various universities.
+- Automated Deadline Filtration: Intelligent date tracking that displays active upcoming deadlines and filters out expired events.
+- Peer-to-Peer Team Finder: Dedicated matchmaking directory where students can find teammates filtered by skills and events.
+- Real-Time Messaging: One-to-one messaging system for event participants and prospective team partners.
+- Push Notifications and Reminders: Instant notifications for newly published events and scheduled exact alarms for closing deadlines.
+- Student Profile and Certificate Showcase: Profile management featuring bio, skills, past participations, and verifiable certificates.
+- Faculty and Admin Portal: Verification system for college coordinators to publish events, post announcements, and view registrations.
+
+10. App Icon
+Upload 512 x 512 PNG/JPEG icon (Generated adaptive launcher asset in res/mipmap).
+
+11. Phone Screenshots
+Upload phone screenshots capturing Home Feed, Event Details, Team Finder Directory, Chat Screen, and Profile & Deadlines.
+
+12. Tablet Screenshots
+Upload 7-inch and 10-inch screenshots (UI responsive).
+
+13. Feature Graphic
+Upload 1024 x 500 PNG/JPEG promotional graphic banner.
+
+
+SECTION 3 - APPLICATION BUILD
+
+14. Final Android App Bundle (AAB)
+Uploaded signed release bundle: app-release.aab (located at app/build/outputs/bundle/release/app-release.aab)
+
+15. Version Name
+1.0
+
+16. Version Code
+1
+
+17. Has the final application been tested?
+- Yes
+
+18. Are the major application features working correctly?
+- Yes
+
+
+SECTION 4 - PRIVACY AND DATA SAFETY
+
+19. Does the application collect user data?
+- Yes
+
+20. Does the application share user data with third parties?
+- No
+
+21. What types of data does the application collect?
+- Personal information (Name, Email address, Phone number, College name, Department, Academic Year)
+- Photos / Storage (Profile pictures, cover photos, certificate attachments)
+- Device information (Firebase Cloud Messaging device registration tokens)
+- App activity (Event registrations, team finder requests, direct chat messages)
+
+22. Privacy Policy URL
+https://theoriongd.github.io/kampus/privacy-policy.html
+
+23. Can users request deletion of their data?
+- Yes
+
+24. Does the application use third-party services or SDKs?
+- Yes
+
+25. List the third-party services or SDKs used
+Firebase Cloud Messaging (FCM), MongoDB Atlas Cloud Driver, Coil Image Loader, Google Gson.
+
+
+SECTION 5 - ADS AND PERMISSIONS
+
+26. Does the application contain advertisements?
+- No
+
+27. Does the application request sensitive or special permissions?
+- Yes
+
+28. Permissions used by the application
+- Notifications (android.permission.POST_NOTIFICATIONS)
+- Calendar / Alarms (android.permission.SCHEDULE_EXACT_ALARM, android.permission.USE_EXACT_ALARM)
+- Boot Receiver (android.permission.RECEIVE_BOOT_COMPLETED)
+- Internet (android.permission.INTERNET)
+- SMS (android.permission.SEND_SMS)
+
+29. Explain why these permissions are required
+- POST_NOTIFICATIONS: Required to notify students about newly published college events, urgent deadline reminders, and direct messages from teammates.
+- SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: Required to trigger exact-time deadline alerts and calendar reminders even when the app is in the background or killed.
+- RECEIVE_BOOT_COMPLETED: Required to reschedule active deadline reminders and alarms when the user restarts their phone.
+- INTERNET: Required to communicate with Firebase Cloud Messaging and MongoDB Atlas to fetch live event listings and team directory data.
+- SEND_SMS: Used as an optional fallback for offline emergency contact with event coordinators.
+
+
+SECTION 6 - TARGET AUDIENCE AND CONTENT
+
+30. Target Audience
+- Teenagers
+- Adults
+
+31. Does the application contain content that may require age restrictions?
+- No
+
+32. Does the application contain user-generated content?
+- Yes
+
+33. Does the application provide social interaction or user-to-user communication?
+- Yes
+
+
+SECTION 7 - REVIEWER ACCESS
+
+34. Does the application require login?
+- Yes
+
+35. Test Account Email / Username
+Student Account: student.test@kampus.edu
+Faculty Account: faculty.admin@kampus.edu
+
+36. Test Account Password
+KampusPass123!
+
+37. OTP / PIN / Special Access Instructions
+The application supports direct sign-in with the test account without requiring a two-factor SMS OTP or hardware token. Reviewers can also enter student mode directly from the onboarding screen.
+
+38. Reviewer Instructions
+1. Open the Kampus application.
+2. On the Onboarding screen, select Student (or sign in with student.test@kampus.edu).
+3. In the Home Tab, browse available college events, filter by category, or open an event to view full descriptions and register.
+4. Open the Team Finder Tab to browse registered participants, view full student profiles with verified skills and certificates, and tap Direct Chat to test messaging.
+5. Open the Profile & Deadlines Tab to view active upcoming deadlines and personal certificates.
+6. Switch to Faculty Mode to test event publishing and immediate notification broadcasting.
+
+
+SECTION 8 - FINAL CONFIRMATION
+
+39. Application Readiness Checklist
+- Final application build is ready
+- Final AAB file has been uploaded
+- App icon is ready
+- Screenshots are ready
+- Short description is ready
+- Full description is ready
+- Privacy Policy is available
+- Data Safety information has been checked
+- Login/test account has been provided if required
+- Application has been tested
+- All submitted information is accurate
+
+40. Pending Issues / Comments
+None. All functional modules, MongoDB Atlas storage, FCM push notifications, strict deadline filtering, and signed release builds are verified.
+
+41. Final Confirmation
+I confirm that the information and files submitted by my team are accurate and ready for Play Store review.
