@@ -757,6 +757,56 @@ object MongoDBHelper {
     }
 
     /**
+     * Fetches Section 1 (Campus Entrance/Banner) and Section 2 (Architectural Blueprint Layout)
+     * media images for College Admin from MongoDB Atlas 'colleges' and 'college_faculties' collections.
+     */
+    fun fetchCollegeMedia(email: String, collegeName: String, onResult: (String, String) -> Unit) {
+        val safeEmail = email.trim().lowercase()
+        val safeCollege = collegeName.trim()
+        scope.launch {
+            try {
+                var bannerUrl = ""
+                var layoutUrl = ""
+
+                // 1. Query 'colleges' collection
+                val collegesCol = getCollection("colleges")
+                val collegeDoc = collegesCol?.find(
+                    Filters.or(
+                        Filters.eq("_id", safeEmail),
+                        Filters.eq("collegeEmail", safeEmail),
+                        Filters.eq("collegeName", safeCollege)
+                    )
+                )?.firstOrNull()
+
+                if (collegeDoc != null) {
+                    bannerUrl = collegeDoc.getString("collegePhotoUri") ?: ""
+                    layoutUrl = collegeDoc.getString("campusLayoutUri") ?: ""
+                }
+
+                // 2. Fallback to 'college_faculties' collection if blank
+                if (bannerUrl.isBlank() || layoutUrl.isBlank()) {
+                    val facultiesCol = getCollection("college_faculties")
+                    val facultyDoc = facultiesCol?.find(
+                        Filters.or(
+                            Filters.eq("_id", safeEmail),
+                            Filters.eq("collegeEmail", safeEmail)
+                        )
+                    )?.firstOrNull()
+
+                    if (facultyDoc != null) {
+                        if (bannerUrl.isBlank()) bannerUrl = facultyDoc.getString("collegePhotoUri") ?: ""
+                        if (layoutUrl.isBlank()) layoutUrl = facultyDoc.getString("campusLayoutUri") ?: ""
+                    }
+                }
+
+                mainHandler.post { onResult(bannerUrl, layoutUrl) }
+            } catch (_: Exception) {
+                mainHandler.post { onResult("", "") }
+            }
+        }
+    }
+
+    /**
      * Authenticates Faculty credentials dynamically against the MongoDB 'college_faculties' collection.
      */
     fun authenticateFaculty(email: String, password: String, onResult: (FacultyKYC?, String?) -> Unit) {

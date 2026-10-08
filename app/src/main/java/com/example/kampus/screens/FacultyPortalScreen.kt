@@ -76,6 +76,16 @@ fun FacultyEventPublishScreen(
 
     val context = LocalContext.current
 
+    // Fetch Section 1 (Campus Entrance/Banner) and Section 2 (Blueprint Layout) images directly from MongoDB database
+    LaunchedEffect(faculty.collegeEmail, adminTab) {
+        if (isCollegeAdmin) {
+            MongoDBHelper.fetchCollegeMedia(faculty.collegeEmail, faculty.collegeName) { bannerUri, layoutUri ->
+                if (bannerUri.isNotBlank()) currentCampusBannerUri = bannerUri
+                if (layoutUri.isNotBlank()) currentLayoutUri = layoutUri
+            }
+        }
+    }
+
     // 🗑️ AUTOMATIC EXPIRY CHECK & DELETE: Automatically remove events when their end time passes
     LaunchedEffect(allEvents) {
         val targetEvents = if (isCollegeAdmin) {
@@ -345,17 +355,37 @@ fun FacultyEventPublishScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                 Text(
                     text = if (isCollegeAdmin) "🏛️ College Admin Portal" else "🎓 Dept Faculty Portal",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
+                    color = Color(0xFF0F172A),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                Text("${faculty.name} • ${faculty.collegeName} (${faculty.department})", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = "${faculty.name} • ${faculty.collegeName} (${faculty.department})",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
-            Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9))) {
-                Text("Logout", color = Color(0xFFDC2626), fontSize = 12.sp)
+            Button(
+                onClick = onLogout,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2)),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "🚪 Logout",
+                    color = Color(0xFFDC2626),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
         }
 
@@ -364,7 +394,7 @@ fun FacultyEventPublishScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             FilterChip(
                 selected = adminTab == 0,
-                onClick = { adminTab = 0; showProfilePage = false },
+                onClick = { adminTab = 0 },
                 label = { Text("Post Event", fontSize = 11.sp) },
                 modifier = Modifier.weight(1f)
             )
@@ -380,20 +410,19 @@ fun FacultyEventPublishScreen(
                     onClick = {
                         adminTab = 1
                         selectedDeptApprovals = null
-                        showProfilePage = false
                     },
                     label = { Text("Approvals ($pendingCount)", fontSize = 11.sp) },
                     modifier = Modifier.weight(1.1f)
                 )
                 FilterChip(
                     selected = adminTab == 2,
-                    onClick = { adminTab = 2; showProfilePage = false },
+                    onClick = { adminTab = 2 },
                     label = { Text("Events", fontSize = 11.sp) },
                     modifier = Modifier.weight(0.9f)
                 )
                 FilterChip(
                     selected = adminTab == 3,
-                    onClick = { adminTab = 3; showProfilePage = false },
+                    onClick = { adminTab = 3 },
                     label = { Text("Campus Media", fontSize = 11.sp) },
                     modifier = Modifier.weight(1.2f)
                 )
@@ -401,59 +430,16 @@ fun FacultyEventPublishScreen(
                 val myEventsCount = allEvents.count { it.coordinatorName.equals(faculty.name, ignoreCase = true) }
                 FilterChip(
                     selected = adminTab == 2,
-                    onClick = { adminTab = 2; showProfilePage = false },
+                    onClick = { adminTab = 2 },
                     label = { Text("My Events ($myEventsCount)") },
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            FilterChip(
-                selected = showProfilePage,
-                onClick = { showProfilePage = true },
-                label = { Text("👤 Profile", fontSize = 11.sp) },
-                modifier = Modifier.weight(1f)
-            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        if (showProfilePage) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFF8FAFC)
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { showProfilePage = false }) {
-                            Text("← Back to Portal", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Text(
-                            if (isCollegeAdmin) "🏛️ College Admin Profile" else "🎓 Faculty Profile",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = Color(0xFF0F172A)
-                        )
-                        Spacer(modifier = Modifier.width(60.dp))
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        FacultyProfileScreen(
-                            faculty = faculty,
-                            onUpdateFaculty = onUpdateFaculty,
-                            onLogout = onLogout
-                        )
-                    }
-                }
-            }
-        } else if (adminTab == 0) {
+        if (adminTab == 0) {
             if (selectedCategory == null) {
                 Text(
                     text = if (isCollegeAdmin) "SELECT EVENT CATEGORY TO PUBLISH (ALL CATEGORIES):" else "SELECT CATEGORY FOR ${faculty.department.uppercase()}:",

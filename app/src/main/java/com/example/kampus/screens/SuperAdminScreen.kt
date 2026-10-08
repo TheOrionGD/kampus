@@ -215,12 +215,24 @@ fun SuperAdminScreen(
             .padding(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column {
-                Text("🛡️ Governance Portal", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text("College & Department Hierarchy Directory", fontSize = 12.sp, color = Color.Gray)
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text("🛡️ Governance Portal", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text("College & Department Hierarchy Directory", fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
-            Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE2E8F0))) {
-                Text("Logout", color = Color.Black)
+            Button(
+                onClick = onLogout,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2)),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "🚪 Logout",
+                    color = Color(0xFFDC2626),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
         }
 
@@ -234,43 +246,26 @@ fun SuperAdminScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
-                selected = tabIndex == 0 && !showProfilePage,
+                selected = tabIndex == 0,
                 onClick = {
                     tabIndex = 0
                     selectedCollegeDetail = null
-                    showProfilePage = false
                 },
                 label = { Text("Pending Approvals (${pendingList.size})") }
             )
 
             FilterChip(
-                selected = tabIndex == 1 && !showProfilePage,
+                selected = tabIndex == 1,
                 onClick = {
                     tabIndex = 1
-                    showProfilePage = false
                 },
                 label = { Text("Approved Colleges ($approvedCollegesCount)") }
-            )
-
-            FilterChip(
-                selected = showProfilePage,
-                onClick = { showProfilePage = true },
-                label = { Text("👤 Profile") }
             )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        if (showProfilePage) {
-            SuperAdminProfileScreen(
-                superAdminEmail = superAdminEmail,
-                pendingKycCount = pendingList.size,
-                approvedCollegesCount = approvedCollegesCount,
-                totalFacultiesCount = allFacultiesList.size,
-                onLogout = onLogout,
-                onBack = { showProfilePage = false }
-            )
-        } else if (tabIndex == 0) {
+        if (tabIndex == 0) {
             val pendingSnapshot = pendingList.toList()
             if (pendingSnapshot.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
