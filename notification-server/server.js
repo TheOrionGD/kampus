@@ -81,34 +81,58 @@ app.post('/api/push/send', async (req, res) => {
     }
 });
 
-// --- 2. Notification Processor (MongoDB Event-Driven) ---
+// HTTP POST Event Notification Trigger Endpoint (Called by Kotlin App after event creation)
+app.post('/api/notifications/notify-event', async (req, res) => {
+    const { eventId, timestamp } = req.body;
+
+    if (!eventId) {
+        return res.status(400).json({ error: 'eventId is required' });
+    }
+
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        let eventDoc = await db.collection('events').findOne({ _id: new ObjectId(eventId) });
+        if (!eventDoc) {
+            eventDoc = await db.collection('events').findOne({ id: eventId });
+        }
+
+        if (!eventDoc) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+
+        // Process notification asynchronously for all users
+        processPublishedEvent(eventDoc);
+
+        return res.status(200).json({ success: true, message: 'Event notification processing initiated' });
+    } catch (err) {
+        console.error('[ApiTrigger] Error in notify-event endpoint:', err);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// --- 2. Notification Processor (MongoDB Event-Driven & API Triggered) ---
 
 async function processPublishedEvent(eventDoc) {
     if (!db) return;
 
     const eventId = eventDoc._id ? eventDoc._id.toString() : eventDoc.id;
     const collegeId = eventDoc.collegeId || 'col_abc';
-    const targetType = eventDoc.targetType || 'ALL_STUDENTS';
-    const title = eventDoc.title || 'New College Event';
+    const title = eventDoc.title || 'New Event';
     const description = eventDoc.description || 'A new event has been scheduled.';
-    const category = eventDoc.category || 'WORKSHOP';
+    const category = eventDoc.category || 'GENERAL';
 
     console.log(`\n==================================================`);
     console.log(`[NotificationProcessor] Processing Event ID: ${eventId}`);
-    console.log(`[NotificationProcessor] College: ${collegeId} | Target: ${targetType}`);
+    console.log(`[NotificationProcessor] College: ${collegeId} | Title: ${title}`);
 
     try {
-        // Query users matching collegeId and target audience filters (Section 10 & 22)
-        const userQuery = { collegeId: collegeId };
-        if (eventDoc.targetDepartments && eventDoc.targetDepartments.length > 0) {
-            userQuery.departmentId = { $in: eventDoc.targetDepartments };
-        }
-        if (eventDoc.targetYears && eventDoc.targetYears.length > 0) {
-            userQuery.year = { $in: eventDoc.targetYears };
-        }
-
+        // Query ALL users matching collegeId (or all users if cross-college) across ALL roles (Students, Faculty, College Admins, Super Admins)
+        const userQuery = collegeId && collegeId !== 'ALL' ? { collegeId: collegeId } : {};
         const targetUsers = await db.collection('users').find(userQuery).toArray();
-        console.log(`[NotificationProcessor] Identified ${targetUsers.length} target student records.`);
+        console.log(`[NotificationProcessor] Identified ${targetUsers.length} total target users across all roles.`);
 
         let notificationsCreated = 0;
         let pushDispatches = 0;
