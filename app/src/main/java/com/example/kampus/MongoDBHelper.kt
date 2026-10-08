@@ -192,7 +192,7 @@ object MongoDBHelper {
         registerDevicePushToken(token, userEmail, role)
     }
 
-    // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Compressed JPEG Base64 data URL for global cross-device rendering)
+    // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Cloudinary CDN upload with Base64 fallback)
     fun uploadImageToStorage(context: Context?, uriStr: String, folderName: String, onComplete: (String) -> Unit) {
         if (uriStr.isBlank()) {
             onComplete("")
@@ -219,8 +219,8 @@ object MongoDBHelper {
                 }
 
                 if (bitmap != null) {
-                    // Scale down image to optimal size (max width/height 1000px) to keep documents lightweight (~50-100KB)
-                    val maxDim = 1000
+                    // Scale down image to optimal size (max width/height 1200px)
+                    val maxDim = 1200
                     var width = bitmap.width
                     var height = bitmap.height
                     if (width > maxDim || height > maxDim) {
@@ -235,6 +235,14 @@ object MongoDBHelper {
                         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
                     }
 
+                    // 1. Primary: Upload to Cloudinary CDN
+                    val cdnUrl = CloudinaryHelper.uploadBitmapToCloudinary(bitmap, folderName)
+                    if (!cdnUrl.isNullOrBlank()) {
+                        mainHandler.post { onComplete(cdnUrl) }
+                        return@launch
+                    }
+
+                    // 2. Fallback: Base64 JPEG data URL if Cloudinary upload is offline or unavailable
                     val outputStream = ByteArrayOutputStream()
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
                     val byteArray = outputStream.toByteArray()
