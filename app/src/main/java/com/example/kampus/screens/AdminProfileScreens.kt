@@ -343,7 +343,10 @@ fun FacultyProfileScreen(
                             text = faculty.collegeName.uppercase(),
                             color = Color(0xFFFBBF24),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
 
                         Surface(
@@ -396,12 +399,18 @@ fun FacultyProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                        ) {
                             Text(
                                 text = faculty.name,
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = Color(0xFF0F172A),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
 
@@ -457,10 +466,10 @@ fun FacultyProfileScreen(
                             onClick = onLogout,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2)),
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🚪", fontSize = 15.sp)
+                                Text("🚪", fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Logout", color = Color(0xFFDC2626), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
@@ -472,7 +481,9 @@ fun FacultyProfileScreen(
                         text = headlineText,
                         fontSize = 13.sp,
                         color = Color(0xFF334155),
-                        lineHeight = 17.sp
+                        lineHeight = 17.sp,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -480,12 +491,16 @@ fun FacultyProfileScreen(
                         text = "🏛️ ${faculty.collegeName} • ${faculty.department} ($roleLabel)",
                         fontSize = 12.sp,
                         color = Color(0xFF64748B),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
                         text = "✉️ ${faculty.collegeEmail}",
                         fontSize = 12.sp,
-                        color = Color(0xFF2563EB)
+                        color = Color(0xFF2563EB),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -495,17 +510,32 @@ fun FacultyProfileScreen(
                             onClick = { showEditInfoModal = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("✏️ Edit Profile Info", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                "✏️ Edit Profile Info",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
 
                         OutlinedButton(
                             onClick = { showEditAboutModal = true },
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(0.9f)
+                            modifier = Modifier.weight(0.9f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("📝 Edit About", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF475569))
+                            Text(
+                                "📝 Edit About",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = Color(0xFF475569),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
 
@@ -661,7 +691,14 @@ private fun ProfileInfoRow(icon: String, label: String, value: String) {
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(label, fontSize = 11.sp, color = Color(0xFF64748B))
-            Text(value, fontSize = 13.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.SemiBold)
+            Text(
+                value,
+                fontSize = 13.sp,
+                color = Color(0xFF0F172A),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -915,12 +952,18 @@ fun SuperAdminProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                        ) {
                             Text(
                                 text = profile?.name ?: "Super Administrator",
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = Color(0xFF0F172A),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
@@ -943,10 +986,10 @@ fun SuperAdminProfileScreen(
                             onClick = onLogout,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2)),
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🚪", fontSize = 15.sp)
+                                Text("🚪", fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Logout", color = Color(0xFFDC2626), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
@@ -958,12 +1001,16 @@ fun SuperAdminProfileScreen(
                         text = profile?.headline ?: "Kampus Super Administrator",
                         fontSize = 13.sp,
                         color = Color(0xFF334155),
-                        lineHeight = 17.sp
+                        lineHeight = 17.sp,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
                         text = "✉️ ${superAdminEmail}",
                         fontSize = 12.sp,
-                        color = Color(0xFF2563EB)
+                        color = Color(0xFF2563EB),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -973,16 +1020,31 @@ fun SuperAdminProfileScreen(
                             onClick = { showEditModal = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("✏️ Edit Profile", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                "✏️ Edit Profile",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                         OutlinedButton(
                             onClick = onBack,
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(0.9f)
+                            modifier = Modifier.weight(0.9f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("← Governance Portal", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF475569))
+                            Text(
+                                "← Governance Portal",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = Color(0xFF475569),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
 
@@ -1086,9 +1148,20 @@ fun SuperAdminProfileScreen(
 }
 
 @Composable
-private fun StatBlock(value: String, label: String, tint: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = tint)
-        Text(label, fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+private fun RowScope.StatBlock(value: String, label: String, tint: Color) {
+    Column(
+        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = tint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = Color(0xFF64748B),
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
     }
 }

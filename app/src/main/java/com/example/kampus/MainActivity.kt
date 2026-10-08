@@ -3,6 +3,7 @@ package com.example.kampus
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -66,7 +67,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // Handle initial deep-linking event ID from notification click
-        pendingDeepLinkEventId = intent?.getStringExtra("eventId")
+        pendingDeepLinkEventId = intent?.getStringExtra("eventId") ?: intent?.getStringExtra("event_id")
 
         setContent {
             KampusTheme {
@@ -83,7 +84,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val eventId = intent.getStringExtra("eventId")
+        val eventId = intent.getStringExtra("eventId") ?: intent.getStringExtra("event_id")
         if (!eventId.isNullOrBlank()) {
             pendingDeepLinkEventId = eventId
         }
@@ -95,13 +96,20 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
     val context = LocalContext.current
     val dataManager = remember { AppDataManager(context) }
 
-    // Request Notification permission for Android 13+
+    // Request Notification permission for Android 13+ (Tiramisu API 33+)
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { _ -> }
+    ) { isGranted ->
+        Log.d("KampusFCM", "Notification permission grant result: $isGranted")
+    }
 
     LaunchedEffect(Unit) {
         MongoDBHelper.prewarmConnection()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
     var route by remember { mutableStateOf(ScreenRoute.SPLASH) }
@@ -168,15 +176,33 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
             dataManager.saveParticipants(remoteList)
         }
 
+        var isInitialEventsSync = true
         MongoDBHelper.listenToEvents { remoteEvents ->
-            for (newEvent in remoteEvents) {
-                val isAlreadyProcessed = NotificationHelper.isEventAlreadyProcessed(context, newEvent.id)
-                if (!isAlreadyProcessed) {
-                    NotificationHelper.markEventAsProcessed(context, newEvent.id)
-                    NotificationHelper.cacheEventLocally(context, newEvent)
+            if (isInitialEventsSync) {
+                // Initial load: Mark all pre-existing events as processed so old historical events don't spam notifications on launch
+                for (ev in remoteEvents) {
+                    val eventTime = ev.id.toLongOrNull() ?: 0L
+                    val isVeryRecent = eventTime > 0L && (System.currentTimeMillis() - eventTime) < 10 * 60 * 1000L
+                    
+                    NotificationHelper.markEventAsProcessed(context, ev.id)
+                    NotificationHelper.cacheEventLocally(context, ev)
 
-                    if (!NotificationHelper.isDeadlinePassed(newEvent.deadline) && !newEvent.isExpired()) {
-                        NotificationHelper.notifyEventPublished(context, newEvent)
+                    if (isVeryRecent && !NotificationHelper.isDeadlinePassed(ev.deadline) && !ev.isExpired()) {
+                        NotificationHelper.notifyEventPublished(context, ev)
+                    }
+                }
+                isInitialEventsSync = false
+            } else {
+                // Real-time updates: Instantly notify for newly posted events
+                for (newEvent in remoteEvents) {
+                    val isAlreadyProcessed = NotificationHelper.isEventAlreadyProcessed(context, newEvent.id)
+                    if (!isAlreadyProcessed) {
+                        NotificationHelper.markEventAsProcessed(context, newEvent.id)
+                        NotificationHelper.cacheEventLocally(context, newEvent)
+
+                        if (!NotificationHelper.isDeadlinePassed(newEvent.deadline) && !newEvent.isExpired()) {
+                            NotificationHelper.notifyEventPublished(context, newEvent)
+                        }
                     }
                 }
             }
@@ -230,7 +256,15 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                     val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(remoteCol.collegeEmail, ignoreCase = true) }
                     if (idx != -1) {
                         allFaculties[idx] = allFaculties[idx].copy(
-                            isVerifiedBySuperAdmin = allFaculties[idx].isVerifiedBySuperAdmin || remoteCol.isVerifiedBySuperAdmin
+                            isVerifiedBySuperAdmin = allFaculties[idx].isVerifiedBySuperAdmin || remoteCol.isVerifiedBySuperAdmin,
+                            isVerifiedByCollegeAdmin = allFaculties[idx].isVerifiedByCollegeAdmin || remoteCol.isVerifiedByCollegeAdmin,
+                            collegePhotoUri = if (remoteCol.collegePhotoUri.isNotBlank()) remoteCol.collegePhotoUri else allFaculties[idx].collegePhotoUri,
+                            campusLayoutUri = if (remoteCol.campusLayoutUri.isNotBlank()) remoteCol.campusLayoutUri else allFaculties[idx].campusLayoutUri,
+                            accreditation = if (remoteCol.accreditation.isNotBlank()) remoteCol.accreditation else allFaculties[idx].accreditation,
+                            collegeWebsite = if (remoteCol.collegeWebsite.isNotBlank()) remoteCol.collegeWebsite else allFaculties[idx].collegeWebsite,
+                            profilePhotoUri = if (remoteCol.profilePhotoUri.isNotBlank()) remoteCol.profilePhotoUri else allFaculties[idx].profilePhotoUri,
+                            headline = if (remoteCol.headline.isNotBlank()) remoteCol.headline else allFaculties[idx].headline,
+                            about = if (remoteCol.about.isNotBlank()) remoteCol.about else allFaculties[idx].about
                         )
                     } else {
                         allFaculties.add(remoteCol)
@@ -273,7 +307,14 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                     if (idx != -1) {
                         allFaculties[idx] = allFaculties[idx].copy(
                             isVerifiedBySuperAdmin = allFaculties[idx].isVerifiedBySuperAdmin || remoteFac.isVerifiedBySuperAdmin,
-                            isVerifiedByCollegeAdmin = allFaculties[idx].isVerifiedByCollegeAdmin || remoteFac.isVerifiedByCollegeAdmin
+                            isVerifiedByCollegeAdmin = allFaculties[idx].isVerifiedByCollegeAdmin || remoteFac.isVerifiedByCollegeAdmin,
+                            collegePhotoUri = if (remoteFac.collegePhotoUri.isNotBlank()) remoteFac.collegePhotoUri else allFaculties[idx].collegePhotoUri,
+                            campusLayoutUri = if (remoteFac.campusLayoutUri.isNotBlank()) remoteFac.campusLayoutUri else allFaculties[idx].campusLayoutUri,
+                            accreditation = if (remoteFac.accreditation.isNotBlank()) remoteFac.accreditation else allFaculties[idx].accreditation,
+                            collegeWebsite = if (remoteFac.collegeWebsite.isNotBlank()) remoteFac.collegeWebsite else allFaculties[idx].collegeWebsite,
+                            profilePhotoUri = if (remoteFac.profilePhotoUri.isNotBlank()) remoteFac.profilePhotoUri else allFaculties[idx].profilePhotoUri,
+                            headline = if (remoteFac.headline.isNotBlank()) remoteFac.headline else allFaculties[idx].headline,
+                            about = if (remoteFac.about.isNotBlank()) remoteFac.about else allFaculties[idx].about
                         )
                     } else {
                         allFaculties.add(remoteFac)
@@ -584,9 +625,19 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
 
                             MongoDBHelper.saveEvent(processedEvent) { success ->
                                 if (success) {
-                                    Toast.makeText(context, "Event published & synced to MongoDB Atlas!", Toast.LENGTH_SHORT).show()
-                                    // Trigger instant rich push notification
+                                    Toast.makeText(context, "🎉 Event Published Live & Synced!", Toast.LENGTH_SHORT).show()
+                                    // 1. Mark event as processed first on publisher device to prevent duplicate notification from real-time listener
+                                    NotificationHelper.markEventAsProcessed(context, processedEvent.id)
+                                    // 2. Mobile phone status bar push notification (sound, vibration, heads-up)
                                     NotificationHelper.notifyEventPublished(context, processedEvent)
+                                    // 3. Broadcast push notification & in-app notification to all devices
+                                    NotificationHelper.createBroadcastNotification(
+                                        context,
+                                        "🎉 New Event: ${processedEvent.title}",
+                                        "${processedEvent.college} • ${processedEvent.category} event registration open now! Deadline: ${processedEvent.deadline}",
+                                        "EVENT_PUBLISHED",
+                                        processedEvent.id
+                                    )
                                 }
                             }
                             allEvents.add(0, processedEvent)
@@ -930,6 +981,7 @@ fun MainAppScaffold(
                 4 -> ProfileScreen(
                     user = user,
                     postsList = postsList,
+                    allCollegesList = allFaculties,
                     onAddNewPost = onAddNewPost,
                     onDeletePost = onDeletePost,
                     onUpdateUser = onUpdateUser,

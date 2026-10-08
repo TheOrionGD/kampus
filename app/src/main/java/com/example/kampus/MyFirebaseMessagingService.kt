@@ -7,9 +7,16 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
 /**
- * High-performance FCM Service handling data-only high-priority event pushes.
- * Executes on background thread with fast path validation, idempotency checks,
- * local caching, and instant notification dispatch without blocking network calls.
+ * Dedicated FirebaseMessagingService handling FCM token registration,
+ * data payload parsing, foreground message processing, and killed/background push handling.
+ * 
+ * Supports structured notification data parameters:
+ * - event_id / eventId
+ * - title
+ * - category
+ * - registration_deadline / deadline
+ * - event_date / eventDate
+ * - event_time / startTime / time
  */
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -23,49 +30,46 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "FCM_RECEIVED: Message received from ${remoteMessage.from}, priority=${remoteMessage.priority}")
 
         val data = remoteMessage.data
-        if (data.isEmpty()) {
-            Log.w(TAG, "FCM_DATA_INVALID: Empty data payload received, skipping")
-            return
-        }
+        val notification = remoteMessage.notification
+
+        // Extract structured data parameters (supporting both snake_case and camelCase)
+        val eventId = data["event_id"]?.trim() ?: data["eventId"]?.trim() ?: ""
+        val title = data["title"]?.trim() ?: notification?.title?.trim() ?: ""
+        val category = data["category"]?.trim()?.ifBlank { "General" } ?: "General"
+        val deadline = data["registration_deadline"]?.trim() ?: data["deadline"]?.trim() ?: "Soon"
+        val eventDate = data["event_date"]?.trim() ?: data["eventDate"]?.trim() ?: ""
+        val eventTime = data["event_time"]?.trim() ?: data["startTime"]?.trim() ?: data["time"]?.trim() ?: "10:00 AM"
 
         val type = data["type"] ?: ""
 
         // Handle direct chat messages
-        if (type == "CHAT_MESSAGE" || (data.containsKey("senderName") && !data.containsKey("eventId"))) {
+        if (type == "CHAT_MESSAGE" || (data.containsKey("senderName") && eventId.isBlank())) {
             val senderName = data["senderName"] ?: "Teammate"
-            val messageText = data["messageText"] ?: "New message received"
+            val messageText = data["messageText"] ?: notification?.body ?: "New message received"
             NotificationHelper.notifyNewChatMessage(applicationContext, senderName, messageText)
             return
         }
 
-        // Handle event notifications (NEW_EVENT or legacy EVENT_PUBLISHED)
-        val eventId = data["eventId"]?.trim() ?: ""
-        val title = data["title"]?.trim() ?: ""
-
-        // Validation of required payload fields
-        if (eventId.isBlank() || title.isBlank()) {
-            Log.w(TAG, "FCM_DATA_INVALID: Missing required eventId or title (eventId='$eventId', title='$title')")
+        // Validate payload presence
+        if (eventId.isBlank() && title.isBlank() && notification == null) {
+            Log.w(TAG, "FCM_DATA_INVALID: Empty or missing required payload fields")
             return
         }
 
-        Log.d(TAG, "FCM_DATA_VALID: Valid event payload for eventId=$eventId ('$title')")
+        val safeTitle = title.ifBlank { notification?.title } ?: "Campus Event Alert"
+        val safeBody = data["description"] ?: data["fullDescription"] ?: notification?.body ?: "$category • Deadline: $deadline"
 
-        // Idempotency: Check if event has already been processed and notified
-        if (NotificationHelper.isEventAlreadyProcessed(applicationContext, eventId)) {
+        // Deduplication check: prevent duplicate notifications for same eventId
+        if (eventId.isNotBlank() && NotificationHelper.isEventAlreadyProcessed(applicationContext, eventId)) {
             Log.d(TAG, "EVENT_ALREADY_PROCESSED: Event $eventId already processed, ignoring duplicate push")
             return
         }
 
-        // Mark as processed immediately to prevent duplicate concurrent processing
-        NotificationHelper.markEventAsProcessed(applicationContext, eventId)
+        if (eventId.isNotBlank()) {
+            NotificationHelper.markEventAsProcessed(applicationContext, eventId)
+        }
 
-        val category = data["category"]?.trim()?.ifBlank { "General" } ?: "General"
-        val deadline = data["deadline"]?.trim()?.ifBlank { "Soon" } ?: "Soon"
-        val eventDate = data["eventDate"]?.trim()?.ifBlank { "" } ?: ""
-        val startTime = data["startTime"]?.trim() ?: data["time"]?.trim() ?: "10:00 AM"
-        val endTime = data["endTime"]?.trim() ?: "12:00 PM"
         val college = data["college"]?.trim()?.ifBlank { "Kampus" } ?: "Kampus"
-        val description = data["description"]?.trim() ?: data["fullDescription"]?.trim() ?: ""
         val posterUrl = data["posterUrl"]?.trim() ?: ""
         val mode = data["mode"]?.trim() ?: "Online"
         val eligibility = data["eligibility"]?.trim() ?: "All Students"
@@ -76,14 +80,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val targetDept = data["targetDept"]?.trim() ?: "All Departments"
 
         val event = CollegeEvent(
-            id = eventId,
-            title = title,
+            id = eventId.ifBlank { System.currentTimeMillis().toString() },
+            title = safeTitle,
             college = college,
             category = category,
             deadline = deadline,
             eventDate = eventDate,
-            startTime = startTime,
-            endTime = endTime,
+            startTime = eventTime,
+            endTime = data["endTime"]?.trim() ?: "12:00 PM",
             mode = mode,
             eligibility = eligibility,
             fee = fee,
@@ -91,7 +95,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             coordinatorRole = coordinatorRole,
             postedTime = "Just now",
             announcementNote = "",
-            fullDescription = description,
+            fullDescription = safeBody,
             prizePool = prizePool,
             targetDept = targetDept,
             posterUrl = posterUrl
@@ -100,13 +104,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // 1. Fast local cache: Persist event locally so it's instantly visible on app open
         NotificationHelper.cacheEventLocally(applicationContext, event)
 
-        // 2. Fast notification: Render Android notification immediately without slow network blocking
+        // 2. Fast notification: Render Android notification with pending intent attached
         NotificationHelper.notifyEventPublished(applicationContext, event)
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "TOKEN_REFRESHED: FCM Token updated")
+        Log.d(TAG, "TOKEN_REFRESHED: FCM Token updated -> $token")
         if (token.isNotBlank()) {
             MongoDBHelper.registerDeviceFcmToken(token)
         }

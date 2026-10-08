@@ -25,6 +25,11 @@ import coil.compose.AsyncImage
 import com.example.kampus.models.CollegeEvent
 import com.example.kampus.models.StudentUser
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.example.kampus.MongoDBHelper
+
 data class FeedCategoryBanner(
     val name: String,
     val subtitle: String,
@@ -33,16 +38,37 @@ data class FeedCategoryBanner(
     val inchargeRole: String
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeFeedScreen(
     user: StudentUser,
     events: List<CollegeEvent>,
-    onEventClick: (CollegeEvent) -> Unit
+    onEventClick: (CollegeEvent) -> Unit,
+    onRefresh: (() -> Unit)? = null
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
     var categoryDetailView by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val handleRefresh: () -> Unit = {
+        isRefreshing = true
+        coroutineScope.launch {
+            MongoDBHelper.resetConnection()
+            MongoDBHelper.prewarmConnection()
+            onRefresh?.invoke()
+            delay(1200)
+            isRefreshing = false
+        }
+    }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = handleRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
 
     val allCategoryBanners = listOf(
         FeedCategoryBanner("Hackathon", "Build Tech Solutions & Win Cash Prizes", "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800", "💻", "Event Convener / Faculty"),
@@ -549,3 +575,4 @@ fun HomeFeedScreen(
         }
     }
 }
+}

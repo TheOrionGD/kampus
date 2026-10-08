@@ -43,6 +43,7 @@ import java.io.File
 fun ProfileScreen(
     user: StudentUser,
     postsList: List<StudentPost>,
+    allCollegesList: List<com.example.kampus.models.FacultyKYC> = emptyList(),
     onAddNewPost: (StudentPost) -> Unit,
     onDeletePost: (StudentPost) -> Unit,
     onUpdateUser: (StudentUser) -> Unit,
@@ -59,6 +60,16 @@ fun ProfileScreen(
     var currentCoverUri by remember { mutableStateOf(user.coverPhotoUri) }
     var currentProfileUri by remember { mutableStateOf(user.profilePhotoUri) }
     var isOpenToWorkEnabled by remember { mutableStateOf(user.isOpenToWork) }
+
+    val matchingCampusPhoto = remember(allCollegesList, user.college) {
+        allCollegesList.firstOrNull {
+            it.collegeName.trim().equals(user.college.trim(), ignoreCase = true) && it.collegePhotoUri.isNotBlank()
+        }?.collegePhotoUri ?: ""
+    }
+    val defaultCampusBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
+    val effectiveCoverModel = ImageLoaderHelper.getSafeImageModel(currentCoverUri)
+        ?: ImageLoaderHelper.getSafeImageModel(matchingCampusPhoto)
+        ?: defaultCampusBanner
 
     LaunchedEffect(user.coverPhotoUri, user.profilePhotoUri, user.isOpenToWork) {
         currentCoverUri = user.coverPhotoUri
@@ -402,14 +413,12 @@ fun ProfileScreen(
                             )
                         )
                 ) {
-                    if (currentCoverUri.isNotBlank()) {
-                        AsyncImage(
-                            model = ImageLoaderHelper.getSafeImageModel(currentCoverUri),
-                            contentDescription = "Cover Photo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    AsyncImage(
+                        model = effectiveCoverModel,
+                        contentDescription = "Cover Photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
 
                     Row(
                         modifier = Modifier
@@ -422,7 +431,10 @@ fun ProfileScreen(
                             text = user.college.uppercase(),
                             color = Color(0xFFFBBF24),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
 
                         Surface(
@@ -497,12 +509,18 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                        ) {
                             Text(
                                 text = user.name,
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = Color(0xFF0F172A),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
@@ -521,15 +539,15 @@ fun ProfileScreen(
                             }
                         }
 
-                        // Prominent Big Red Logout Button
+                        // Prominent Red Logout Button
                         Button(
                             onClick = onLogout,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2)),
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🚪", fontSize = 15.sp)
+                                Text("🚪", fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Logout", color = Color(0xFFDC2626), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
@@ -541,7 +559,9 @@ fun ProfileScreen(
                         text = user.headline,
                         fontSize = 13.sp,
                         color = Color(0xFF334155),
-                        lineHeight = 17.sp
+                        lineHeight = 17.sp,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -549,12 +569,16 @@ fun ProfileScreen(
                         text = "🏛️ ${user.college} • ${user.year} (${user.department})",
                         fontSize = 12.sp,
                         color = Color(0xFF64748B),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
                         text = "✉️ ${user.email}",
                         fontSize = 12.sp,
-                        color = Color(0xFF2563EB)
+                        color = Color(0xFF2563EB),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -564,17 +588,32 @@ fun ProfileScreen(
                             onClick = { showCreatePostModal = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("➕ Share Skill / Post", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                "➕ Share Skill / Post",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
 
                         OutlinedButton(
                             onClick = { showAvatarOptionsSheet = true },
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.weight(0.9f)
+                            modifier = Modifier.weight(0.9f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Text("✏️ Edit Photos", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF475569))
+                            Text(
+                                "✏️ Edit Photos",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = Color(0xFF475569),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
 
@@ -637,12 +676,36 @@ fun ProfileScreen(
                                 Text("Top Skills", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF0F172A))
                                 Text("✏️ Edit", color = Color(0xFF2563EB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text(
-                                text = (user.skills ?: emptyList()).joinToString(" • "),
-                                fontSize = 12.sp,
-                                color = Color(0xFF2563EB),
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                val skillsList = user.skills ?: emptyList()
+                                if (skillsList.isEmpty()) {
+                                    Text("No skills added yet", fontSize = 12.sp, color = Color.Gray)
+                                } else {
+                                    skillsList.forEach { skill ->
+                                        Surface(
+                                            color = Color(0xFFEFF6FF),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE))
+                                        ) {
+                                            Text(
+                                                text = skill,
+                                                color = Color(0xFF1D4ED8),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

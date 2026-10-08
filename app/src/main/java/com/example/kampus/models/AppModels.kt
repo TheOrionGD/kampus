@@ -20,12 +20,28 @@ object ImageLoaderHelper {
         if (trimmed.startsWith("data:image/") && trimmed.contains("base64,")) {
             try {
                 val base64Data = trimmed.substringAfter("base64,")
-                return Base64.decode(base64Data, Base64.DEFAULT)
-            } catch (_: Exception) {}
+                val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                if (bytes.isNotEmpty()) return bytes
+            } catch (_: Exception) {
+                return null
+            }
         }
         if (trimmed.startsWith("/")) {
             val f = File(trimmed)
             if (f.exists()) return f
+            return null
+        }
+        if (trimmed.startsWith("file://")) {
+            try {
+                val path = android.net.Uri.parse(trimmed).path
+                if (path != null) {
+                    val f = File(path)
+                    if (f.exists()) return f
+                    return null
+                }
+            } catch (_: Exception) {
+                return null
+            }
         }
         return trimmed
     }
@@ -417,6 +433,7 @@ class AppDataManager(context: Context) {
                 contactNumber = "9876543210",
                 collegeWebsite = "https://kampus.edu",
                 accreditation = "NAAC A++",
+                collegePhotoUri = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000",
                 password = "admin123",
                 role = FacultyRole.COLLEGE_ADMIN,
                 isVerifiedBySuperAdmin = true,

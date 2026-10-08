@@ -347,8 +347,11 @@ fun TeamFinderScreen(
                                 Text(
                                     targetStudent.name,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 17.sp,
-                                    color = Color(0xFF0F172A)
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF0F172A),
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 if (targetStudent.isOpenToWork) {
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -367,12 +370,16 @@ fun TeamFinderScreen(
                                 "${targetStudent.department} • ${targetStudent.year}",
                                 fontSize = 12.sp,
                                 color = Color(0xFF2563EB),
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
                                 "🏛️ ${targetStudent.college}",
                                 fontSize = 12.sp,
-                                color = Color.Gray
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -390,7 +397,9 @@ fun TeamFinderScreen(
                                 "📧 Email: ${targetStudent.email}",
                                 fontSize = 12.sp,
                                 color = Color(0xFF334155),
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             if (targetStudent.phoneNumber.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -398,7 +407,9 @@ fun TeamFinderScreen(
                                     "📱 Mobile: ${targetStudent.phoneNumber}",
                                     fontSize = 12.sp,
                                     color = Color(0xFF334155),
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
                             if (targetStudent.githubLink.isNotBlank()) {
@@ -407,7 +418,9 @@ fun TeamFinderScreen(
                                     "🐙 GitHub: ${targetStudent.githubLink}",
                                     fontSize = 12.sp,
                                     color = Color(0xFF2563EB),
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -430,11 +443,16 @@ fun TeamFinderScreen(
                         Spacer(modifier = Modifier.height(14.dp))
                         Text("Technical Skills:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF0F172A))
                         Spacer(modifier = Modifier.height(6.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(targetStudent.skills) { skill ->
+                        OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            targetStudent.skills.forEach { skill ->
                                 Surface(
                                     color = Color(0xFFEFF6FF),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(14.dp),
                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE))
                                 ) {
                                     Text(
@@ -442,7 +460,9 @@ fun TeamFinderScreen(
                                         color = Color(0xFF1D4ED8),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
                             }

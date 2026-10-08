@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -260,15 +261,43 @@ fun CollegeDirectoryScreen(
                             elevation = CardDefaults.cardElevation(3.dp)
                         ) {
                             Column {
-                                if (safePhotoUri.isNotBlank()) {
+                                val defaultCampusBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
+                                val displayPhotoModel = ImageLoaderHelper.getSafeImageModel(safePhotoUri) ?: defaultCampusBanner
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(155.dp)
+                                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(16.dp)
+                                    ) {
+                                        Text("🏛️", fontSize = 34.sp)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = college.collegeName.uppercase(),
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                    }
+
                                     AsyncImage(
-                                        model = ImageLoaderHelper.getSafeImageModel(safePhotoUri),
+                                        model = displayPhotoModel,
                                         contentDescription = college.collegeName,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .wrapContentHeight()
-                                            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                 }
 
@@ -540,7 +569,48 @@ fun CollegeDirectoryScreen(
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column {
+                        val defaultBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
+                        val detailCampusBanner = ImageLoaderHelper.getSafeImageModel(college.collegePhotoUri) ?: defaultBanner
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text("🏛️", fontSize = 38.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = college.collegeName.uppercase(),
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+
+                            AsyncImage(
+                                model = detailCampusBanner,
+                                contentDescription = "Campus Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -548,9 +618,12 @@ fun CollegeDirectoryScreen(
                         ) {
                             Text(
                                 text = college.collegeName.uppercase(),
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF1E3A8A)
+                                color = Color(0xFF1E3A8A),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
                             )
                             Surface(
                                 color = Color(0xFFFEF3C7),
@@ -696,6 +769,7 @@ fun CollegeDirectoryScreen(
                                 Spacer(modifier = Modifier.weight(1f))
                             }
                         }
+                    }
                     }
                 }
 

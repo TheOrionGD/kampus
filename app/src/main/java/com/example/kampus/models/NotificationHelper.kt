@@ -446,6 +446,15 @@ object NotificationHelper {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("eventId", event.id)
+            putExtra("event_id", event.id)
+            putExtra("title", safeTitle)
+            putExtra("category", safeCategory)
+            putExtra("registration_deadline", safeDeadline)
+            putExtra("deadline", safeDeadline)
+            putExtra("event_date", safeEventDate)
+            putExtra("eventDate", safeEventDate)
+            putExtra("event_time", safeStartTime)
+            putExtra("startTime", safeStartTime)
             putExtra("fromNotification", true)
         }
 
