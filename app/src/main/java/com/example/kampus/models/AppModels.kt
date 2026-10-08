@@ -40,7 +40,10 @@ data class AdminUser(
     val email: String,
     val name: String = "Super Administrator",
     val role: String = "SUPER_ADMIN",
-    val password: String = ""
+    val password: String = "",
+    val profilePhotoUri: String = "",
+    val headline: String = "Kampus Super Administrator",
+    val about: String = "Platform administrator responsible for verifying colleges and managing the Kampus governance hierarchy."
 ) {
     constructor() : this("")
 }
@@ -148,7 +151,10 @@ data class FacultyKYC(
     val idProofUri: String = "",
     val role: FacultyRole = FacultyRole.DEPT_FACULTY,
     val isVerifiedBySuperAdmin: Boolean = false,
-    val isVerifiedByCollegeAdmin: Boolean = false
+    val isVerifiedByCollegeAdmin: Boolean = false,
+    val profilePhotoUri: String = "",
+    val headline: String = "",
+    val about: String = ""
 ) {
     constructor() : this("", "", "", "", "", "", "")
 }
@@ -240,6 +246,21 @@ data class ChatMessage(
     constructor() : this("", "", "", "", 0L)
 }
 
+// 🔔 In-App Notification Model (Database-driven push notifications)
+data class AppNotification(
+    val id: String,
+    val userId: String, // student email, faculty email, or "ALL" for broadcast
+    val userRole: String, // "STUDENT", "FACULTY", "SUPER_ADMIN", "ALL"
+    val title: String,
+    val message: String,
+    val type: String, // "EVENT_PUBLISHED", "EVENT_DEADLINE", "EVENT_REMINDER", "ANNOUNCEMENT", "CHAT"
+    val eventId: String = "",
+    val isRead: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    constructor() : this("", "", "", "", "", "")
+}
+
 enum class ScreenRoute {
     SPLASH,
     PERMISSIONS,
@@ -254,6 +275,85 @@ enum class ScreenRoute {
 class AppDataManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("kampus_app_db_clean", Context.MODE_PRIVATE)
     private val gson = Gson()
+
+    data class AuthSession(
+        val role: String, // "STUDENT", "FACULTY", "SUPER_ADMIN"
+        val email: String
+    )
+
+    fun saveAuthSession(role: String, email: String) {
+        prefs.edit()
+            .putString("auth_session_role", role)
+            .putString("auth_session_email", email.trim().lowercase())
+            .apply()
+    }
+
+    fun saveCurrentStudent(student: StudentUser) {
+        prefs.edit()
+            .putString("auth_session_role", "STUDENT")
+            .putString("auth_session_email", student.email.trim().lowercase())
+            .putString("current_student_json", gson.toJson(student))
+            .apply()
+    }
+
+    fun getCurrentStudent(): StudentUser? {
+        val json = prefs.getString("current_student_json", null) ?: return null
+        return try {
+            gson.fromJson(json, StudentUser::class.java)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun saveCurrentFaculty(faculty: FacultyKYC) {
+        prefs.edit()
+            .putString("auth_session_role", "FACULTY")
+            .putString("auth_session_email", faculty.collegeEmail.trim().lowercase())
+            .putString("current_faculty_json", gson.toJson(faculty))
+            .apply()
+    }
+
+    fun getCurrentFaculty(): FacultyKYC? {
+        val json = prefs.getString("current_faculty_json", null) ?: return null
+        return try {
+            gson.fromJson(json, FacultyKYC::class.java)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun getAuthSession(): AuthSession? {
+        val role = prefs.getString("auth_session_role", null)
+        val email = prefs.getString("auth_session_email", null)
+        if (!role.isNullOrBlank() && !email.isNullOrBlank()) {
+            return AuthSession(role, email)
+        }
+
+        // Fallback 1: check if current_student_json is saved
+        val student = getCurrentStudent()
+        if (student != null && student.email.isNotBlank()) {
+            saveAuthSession("STUDENT", student.email)
+            return AuthSession("STUDENT", student.email)
+        }
+
+        // Fallback 2: check if current_faculty_json is saved
+        val faculty = getCurrentFaculty()
+        if (faculty != null && faculty.collegeEmail.isNotBlank()) {
+            saveAuthSession("FACULTY", faculty.collegeEmail)
+            return AuthSession("FACULTY", faculty.collegeEmail)
+        }
+
+        return null
+    }
+
+    fun clearAuthSession() {
+        prefs.edit()
+            .remove("auth_session_role")
+            .remove("auth_session_email")
+            .remove("current_student_json")
+            .remove("current_faculty_json")
+            .apply()
+    }
 
     fun saveStudents(list: List<StudentUser>) {
         prefs.edit().putString("students_list", gson.toJson(list)).apply()

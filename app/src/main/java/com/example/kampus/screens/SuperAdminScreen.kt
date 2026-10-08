@@ -37,6 +37,7 @@ import java.io.File
 
 @Composable
 fun SuperAdminScreen(
+    superAdminEmail: String = "",
     pendingList: MutableList<FacultyKYC>,
     allFacultiesList: List<FacultyKYC>,
     onFacultyApproved: (FacultyKYC) -> Unit,
@@ -44,6 +45,7 @@ fun SuperAdminScreen(
     onLogout: () -> Unit
 ) {
     var tabIndex by remember { mutableIntStateOf(0) }
+    var showProfilePage by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     var selectedCollegeDetail by remember { mutableStateOf<String?>(null) }
@@ -224,34 +226,51 @@ fun SuperAdminScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
+        val approvedCollegesCount = allFacultiesList
+            .filter { it.isVerifiedBySuperAdmin && it.collegeName.isNotBlank() }
+            .map { it.collegeName.trim().uppercase() }
+            .distinct()
+            .size
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
-                selected = tabIndex == 0,
+                selected = tabIndex == 0 && !showProfilePage,
                 onClick = {
                     tabIndex = 0
                     selectedCollegeDetail = null
+                    showProfilePage = false
                 },
                 label = { Text("Pending Approvals (${pendingList.size})") }
             )
 
-            val approvedCollegesCount = allFacultiesList
-                .filter { it.isVerifiedBySuperAdmin && it.collegeName.isNotBlank() }
-                .map { it.collegeName.trim().uppercase() }
-                .distinct()
-                .size
-
             FilterChip(
-                selected = tabIndex == 1,
+                selected = tabIndex == 1 && !showProfilePage,
                 onClick = {
                     tabIndex = 1
+                    showProfilePage = false
                 },
                 label = { Text("Approved Colleges ($approvedCollegesCount)") }
+            )
+
+            FilterChip(
+                selected = showProfilePage,
+                onClick = { showProfilePage = true },
+                label = { Text("👤 Profile") }
             )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        if (tabIndex == 0) {
+        if (showProfilePage) {
+            SuperAdminProfileScreen(
+                superAdminEmail = superAdminEmail,
+                pendingKycCount = pendingList.size,
+                approvedCollegesCount = approvedCollegesCount,
+                totalFacultiesCount = allFacultiesList.size,
+                onLogout = onLogout,
+                onBack = { showProfilePage = false }
+            )
+        } else if (tabIndex == 0) {
             val pendingSnapshot = pendingList.toList()
             if (pendingSnapshot.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

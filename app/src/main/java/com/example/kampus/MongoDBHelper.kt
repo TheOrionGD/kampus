@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import com.example.kampus.models.AdminUser
+import com.example.kampus.models.AppNotification
 import com.example.kampus.models.ChatMessage
 import com.example.kampus.models.CollegeEvent
 import com.example.kampus.models.DeviceFcmToken
@@ -27,6 +28,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ReplaceOptions
+import com.mongodb.client.model.UpdateOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -511,6 +513,72 @@ object MongoDBHelper {
         }
     }
 
+    // --- 🔔 IN-APP NOTIFICATIONS MONGODB OPERATIONS ---
+    fun saveNotification(notification: AppNotification, onComplete: (Boolean) -> Unit) {
+        scope.launch {
+            try {
+                val col = getCollection("notifications")
+                val json = gson.toJson(notification)
+                val doc = Document.parse(json).append("_id", notification.id)
+                col?.replaceOne(Filters.eq("_id", notification.id), doc, ReplaceOptions().upsert(true))
+                mainHandler.post { onComplete(true) }
+            } catch (_: Exception) {
+                mainHandler.post { onComplete(false) }
+            }
+        }
+    }
+
+    fun listenToNotifications(userId: String, userRole: String, onDataChanged: (List<AppNotification>) -> Unit) {
+        scope.launch {
+            while (isActive) {
+                try {
+                    val col = getCollection("notifications")
+                    val list = mutableListOf<AppNotification>()
+                    val filter = Filters.or(
+                        Filters.eq("userId", userId.trim().lowercase()),
+                        Filters.eq("userId", "ALL"),
+                        Filters.and(
+                            Filters.eq("userRole", userRole),
+                            Filters.ne("userId", userId.trim().lowercase())
+                        )
+                    )
+                    col?.find(filter)?.forEach { doc ->
+                        doc.remove("_id")
+                        val notification = gson.fromJson(doc.toJson(), AppNotification::class.java)
+                        if (notification != null) list.add(notification)
+                    }
+                    val sorted = list.sortedByDescending { it.createdAt }
+                    mainHandler.post { onDataChanged(sorted) }
+                } catch (_: Exception) {}
+                delay(3000)
+            }
+        }
+    }
+
+    fun markNotificationAsRead(notificationId: String, onComplete: (Boolean) -> Unit) {
+        scope.launch {
+            try {
+                val col = getCollection("notifications")
+                col?.updateOne(Filters.eq("_id", notificationId), Document("\$set", Document("isRead", true)))
+                mainHandler.post { onComplete(true) }
+            } catch (_: Exception) {
+                mainHandler.post { onComplete(false) }
+            }
+        }
+    }
+
+    fun markAllNotificationsAsRead(userId: String, onComplete: (Boolean) -> Unit) {
+        scope.launch {
+            try {
+                val col = getCollection("notifications")
+                col?.updateMany(Filters.eq("userId", userId.trim().lowercase()), Document("\$set", Document("isRead", true)))
+                mainHandler.post { onComplete(true) }
+            } catch (_: Exception) {
+                mainHandler.post { onComplete(false) }
+            }
+        }
+    }
+
     // --- 💬 DIRECT CHATS MONGODB OPERATIONS ---
     fun sendDirectMessage(message: ChatMessage, onComplete: (Boolean) -> Unit) {
         scope.launch {
@@ -620,6 +688,70 @@ object MongoDBHelper {
                 }
             } catch (e: Throwable) {
                 mainHandler.post { onResult(false, e.message ?: "Authentication failed (Timeout)") }
+            }
+        }
+    }
+
+    /**
+     * Persists Super Admin profile (name, avatar photo, headline, about) into the
+     * MongoDB 'admins' collection. Uses $set so existing credentials are preserved.
+     */
+    fun saveSuperAdminProfile(
+        email: String,
+        name: String,
+        profilePhotoUri: String,
+        headline: String,
+        about: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        val safeEmail = email.trim().lowercase()
+        scope.launch {
+            try {
+                val col = getCollection("admins")
+                val update = Document("\$set", Document("email", safeEmail)
+                    .append("name", name)
+                    .append("profilePhotoUri", profilePhotoUri)
+                    .append("headline", headline)
+                    .append("about", about)
+                    .append("lastUpdated", System.currentTimeMillis()))
+                col?.updateOne(
+                    Filters.or(Filters.eq("_id", safeEmail), Filters.eq("email", safeEmail)),
+                    update,
+                    UpdateOptions().upsert(true)
+                )
+                mainHandler.post { onComplete(true) }
+            } catch (_: Exception) {
+                mainHandler.post { onComplete(false) }
+            }
+        }
+    }
+
+    /**
+     * Fetches the Super Admin profile document from the MongoDB 'admins' collection.
+     */
+    fun fetchSuperAdminProfile(email: String, onComplete: (AdminUser?) -> Unit) {
+        val safeEmail = email.trim().lowercase()
+        scope.launch {
+            try {
+                val doc = getCollection("admins")?.find(
+                    Filters.or(Filters.eq("_id", safeEmail), Filters.eq("email", safeEmail))
+                )?.firstOrNull()
+
+                if (doc != null) {
+                    val profile = AdminUser(
+                        email = doc.getString("email") ?: safeEmail,
+                        name = doc.getString("name") ?: "Super Administrator",
+                        role = doc.getString("role") ?: "SUPER_ADMIN",
+                        profilePhotoUri = doc.getString("profilePhotoUri") ?: "",
+                        headline = doc.getString("headline") ?: "Kampus Super Administrator",
+                        about = doc.getString("about") ?: ""
+                    )
+                    mainHandler.post { onComplete(profile) }
+                } else {
+                    mainHandler.post { onComplete(null) }
+                }
+            } catch (_: Exception) {
+                mainHandler.post { onComplete(null) }
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.example.kampus.screens
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,7 +34,8 @@ import com.example.kampus.models.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.File
+import java.util.Calendar
+import java.util.Locale
 
 data class EventCategoryBanner(
     val name: String,
@@ -49,28 +52,7 @@ data class DeptBannerItem(
     val icon: String
 )
 
-// 🔥 Helper function to trigger push notifications directly from the app without Cloud Functions (Free Spark Plan)
-fun sendPushNotificationDirectly(collegeName: String, eventTitle: String, category: String, deadline: String) {
-    Thread {
-        try {
-            val client = okhttp3.OkHttpClient()
-            val jsonBody = JSONObject().apply {
-                put("to", "/topics/college_events")
-                put("notification", JSONObject().apply {
-                    put("title", "$collegeName: New Event Published!")
-                    put("body", "$eventTitle ($category) • Deadline: $deadline")
-                })
-                put("data", JSONObject().apply {
-                    put("college", collegeName)
-                })
-            }
-            val body = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-            // Background broadcast request to FCM topic
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }.start()
-}
+
 
 @Composable
 fun FacultyEventPublishScreen(
@@ -82,9 +64,11 @@ fun FacultyEventPublishScreen(
     onFacultyDeleted: (FacultyKYC) -> Unit,
     onDeleteEvent: (CollegeEvent) -> Unit,
     onUpdateFacultyLayout: (FacultyKYC) -> Unit = {},
+    onUpdateFaculty: (FacultyKYC) -> Unit = {},
     onLogout: () -> Unit
 ) {
     var adminTab by remember { mutableIntStateOf(0) }
+    var showProfilePage by remember { mutableStateOf(false) }
     val isCollegeAdmin = faculty.role == FacultyRole.COLLEGE_ADMIN
 
     var currentCampusBannerUri by remember { mutableStateOf(faculty.collegePhotoUri ?: "") }
@@ -179,6 +163,76 @@ fun FacultyEventPublishScreen(
     var fullDesc by remember { mutableStateOf("") }
     var coordinatorRoleTitle by remember { mutableStateOf("") }
 
+    var showModeDropdown by remember { mutableStateOf(false) }
+    var showEligibilityDropdown by remember { mutableStateOf(false) }
+
+    val modeOptions = listOf(
+        "Offline (Campus)",
+        "Online (Virtual)",
+        "Hybrid (Online + Offline)"
+    )
+
+    val eligibilityOptions = listOf(
+        if (isCollegeAdmin) "All College Students" else "${faculty.department} Students",
+        "All College Students",
+        "1st Year Students",
+        "2nd Year Students",
+        "3rd Year Students",
+        "Final Year Students",
+        "1st & 2nd Year Students",
+        "3rd & Final Year Students",
+        "Postgraduate (PG) & Research Scholars"
+    ).distinct()
+
+    val currentCal = Calendar.getInstance()
+    val eventDatePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, day ->
+                eventDate = String.format(Locale.ENGLISH, "%02d/%02d/%d", day, month + 1, year)
+            },
+            currentCal.get(Calendar.YEAR),
+            currentCal.get(Calendar.MONTH),
+            currentCal.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    val deadlineDatePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, day ->
+                deadline = String.format(Locale.ENGLISH, "%02d/%02d/%d", day, month + 1, year)
+            },
+            currentCal.get(Calendar.YEAR),
+            currentCal.get(Calendar.MONTH),
+            currentCal.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    val startTimePickerDialog = remember {
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                val amPm = if (hourOfDay < 12) "AM" else "PM"
+                val hour12 = if (hourOfDay == 0) 12 else if (hourOfDay > 12) hourOfDay - 12 else hourOfDay
+                startTime = String.format(Locale.ENGLISH, "%02d:%02d %s", hour12, minute, amPm)
+            },
+            10, 0, false
+        )
+    }
+
+    val endTimePickerDialog = remember {
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                val amPm = if (hourOfDay < 12) "AM" else "PM"
+                val hour12 = if (hourOfDay == 0) 12 else if (hourOfDay > 12) hourOfDay - 12 else hourOfDay
+                endTime = String.format(Locale.ENGLISH, "%02d:%02d %s", hour12, minute, amPm)
+            },
+            12, 0, false
+        )
+    }
+
     var hackathonTeamSize by remember { mutableStateOf("2 to 4 Members") }
     var hackathonPrizePool by remember { mutableStateOf("₹50,000 Cash Prize") }
     var hackathonTracks by remember { mutableStateOf("Web3, AI, App Dev") }
@@ -205,9 +259,9 @@ fun FacultyEventPublishScreen(
 
     val posterPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val savedPath = saveUriToInternalStorage(context, it, "event_poster")
-            savedPosterPath = savedPath
-            MongoDBHelper.uploadImageToStorage(context, savedPath, "event_posters") { cloudUrl ->
+            val uriString = it.toString()
+            savedPosterPath = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "event_posters") { cloudUrl ->
                 savedPosterPath = cloudUrl
             }
         }
@@ -215,9 +269,9 @@ fun FacultyEventPublishScreen(
 
     val campusBannerPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val savedPath = saveUriToInternalStorage(context, it, "campus_entrance")
-            currentCampusBannerUri = savedPath
-            MongoDBHelper.uploadImageToStorage(context, savedPath, "campus_banners") { cloudUrl ->
+            val uriString = it.toString()
+            currentCampusBannerUri = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_banners") { cloudUrl ->
                 currentCampusBannerUri = cloudUrl
                 val updatedFaculty = faculty.copy(collegePhotoUri = cloudUrl)
                 val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
@@ -230,9 +284,9 @@ fun FacultyEventPublishScreen(
 
     val blueprintPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val savedPath = saveUriToInternalStorage(context, it, "campus_blueprint")
-            currentLayoutUri = savedPath
-            MongoDBHelper.uploadImageToStorage(context, savedPath, "campus_layouts") { cloudUrl ->
+            val uriString = it.toString()
+            currentLayoutUri = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_layouts") { cloudUrl ->
                 currentLayoutUri = cloudUrl
                 val updatedFaculty = faculty.copy(campusLayoutUri = cloudUrl)
                 val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
@@ -310,7 +364,7 @@ fun FacultyEventPublishScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             FilterChip(
                 selected = adminTab == 0,
-                onClick = { adminTab = 0 },
+                onClick = { adminTab = 0; showProfilePage = false },
                 label = { Text("Post Event", fontSize = 11.sp) },
                 modifier = Modifier.weight(1f)
             )
@@ -326,19 +380,20 @@ fun FacultyEventPublishScreen(
                     onClick = {
                         adminTab = 1
                         selectedDeptApprovals = null
+                        showProfilePage = false
                     },
                     label = { Text("Approvals ($pendingCount)", fontSize = 11.sp) },
                     modifier = Modifier.weight(1.1f)
                 )
                 FilterChip(
                     selected = adminTab == 2,
-                    onClick = { adminTab = 2 },
+                    onClick = { adminTab = 2; showProfilePage = false },
                     label = { Text("Events", fontSize = 11.sp) },
                     modifier = Modifier.weight(0.9f)
                 )
                 FilterChip(
                     selected = adminTab == 3,
-                    onClick = { adminTab = 3 },
+                    onClick = { adminTab = 3; showProfilePage = false },
                     label = { Text("Campus Media", fontSize = 11.sp) },
                     modifier = Modifier.weight(1.2f)
                 )
@@ -346,16 +401,59 @@ fun FacultyEventPublishScreen(
                 val myEventsCount = allEvents.count { it.coordinatorName.equals(faculty.name, ignoreCase = true) }
                 FilterChip(
                     selected = adminTab == 2,
-                    onClick = { adminTab = 2 },
+                    onClick = { adminTab = 2; showProfilePage = false },
                     label = { Text("My Events ($myEventsCount)") },
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            FilterChip(
+                selected = showProfilePage,
+                onClick = { showProfilePage = true },
+                label = { Text("👤 Profile", fontSize = 11.sp) },
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        if (adminTab == 0) {
+        if (showProfilePage) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFF8FAFC)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { showProfilePage = false }) {
+                            Text("← Back to Portal", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Text(
+                            if (isCollegeAdmin) "🏛️ College Admin Profile" else "🎓 Faculty Profile",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF0F172A)
+                        )
+                        Spacer(modifier = Modifier.width(60.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        FacultyProfileScreen(
+                            faculty = faculty,
+                            onUpdateFaculty = onUpdateFaculty,
+                            onLogout = onLogout
+                        )
+                    }
+                }
+            }
+        } else if (adminTab == 0) {
             if (selectedCategory == null) {
                 Text(
                     text = if (isCollegeAdmin) "SELECT EVENT CATEGORY TO PUBLISH (ALL CATEGORIES):" else "SELECT CATEGORY FOR ${faculty.department.uppercase()}:",
@@ -461,72 +559,285 @@ fun FacultyEventPublishScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("📌 Core Event Information & Timing", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "📌 Core Event Information & Timing",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color(0xFF1E3A8A)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         OutlinedTextField(
                             value = registrationLink,
                             onValueChange = { registrationLink = it },
-                            label = { Text("Official Registration Form Link *") },
-                            placeholder = { Text("https://forms.google.com/...") },
+                            label = { Text("Official Registration Form Link *", color = Color(0xFF334155)) },
+                            placeholder = { Text("https://forms.google.com/...", color = Color(0xFF94A3B8)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF0F172A),
+                                unfocusedTextColor = Color(0xFF0F172A),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
-                            label = { Text("Event Title *") },
+                            label = { Text("Event Title *", color = Color(0xFF334155)) },
+                            placeholder = { Text("e.g. National Level Technical Symposium", color = Color(0xFF94A3B8)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF0F172A),
+                                unfocusedTextColor = Color(0xFF0F172A),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         OutlinedTextField(
                             value = coordinatorRoleTitle,
                             onValueChange = { coordinatorRoleTitle = it },
-                            label = { Text("In-Charge Staff Role / Title *") },
+                            label = { Text("In-Charge Staff Role / Title *", color = Color(0xFF334155)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF0F172A),
+                                unfocusedTextColor = Color(0xFF0F172A),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        OutlinedTextField(
-                            value = eventDate,
-                            onValueChange = { eventDate = it },
-                            label = { Text("Event Date (e.g. 1/9/26 or 01/09/2026) *") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // 📅 Event Date Picker (Clickable Calendar Dialog)
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
-                                value = startTime,
-                                onValueChange = { startTime = it },
-                                label = { Text("Start Time *") },
-                                placeholder = { Text("10:00 AM") },
-                                modifier = Modifier.weight(1f)
+                                value = eventDate,
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = true,
+                                label = { Text("📅 Event Date (Tap to Pick Calendar Date) *", color = Color(0xFF334155), fontWeight = FontWeight.SemiBold) },
+                                placeholder = { Text("Tap to select date from calendar", color = Color(0xFF94A3B8)) },
+                                trailingIcon = {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0xFFEFF6FF),
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    ) {
+                                        Text("📅", fontSize = 18.sp, modifier = Modifier.padding(6.dp))
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color(0xFF0F172A),
+                                    unfocusedTextColor = Color(0xFF0F172A),
+                                    focusedContainerColor = Color(0xFFF8FAFC),
+                                    unfocusedContainerColor = Color(0xFFF8FAFC)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
                             )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { eventDatePickerDialog.show() }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // ⏰ Start Time & End Time Pickers (Clickable Clock Dialogs)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = startTime,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    enabled = true,
+                                    label = { Text("⏰ Start Time *", color = Color(0xFF334155)) },
+                                    trailingIcon = {
+                                        Text("🕒", fontSize = 16.sp, modifier = Modifier.padding(end = 6.dp))
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF0F172A),
+                                        focusedContainerColor = Color(0xFFF8FAFC),
+                                        unfocusedContainerColor = Color(0xFFF8FAFC)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clickable { startTimePickerDialog.show() }
+                                )
+                            }
+
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = endTime,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    enabled = true,
+                                    label = { Text("⏰ End Time (Expiry) *", color = Color(0xFF334155)) },
+                                    trailingIcon = {
+                                        Text("🕒", fontSize = 16.sp, modifier = Modifier.padding(end = 6.dp))
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF0F172A),
+                                        focusedContainerColor = Color(0xFFF8FAFC),
+                                        unfocusedContainerColor = Color(0xFFF8FAFC)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clickable { endTimePickerDialog.show() }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 📅 Registration Deadline Picker & Fee
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = deadline,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    enabled = true,
+                                    label = { Text("⏰ Reg. Deadline *", color = Color(0xFF334155), fontWeight = FontWeight.SemiBold) },
+                                    placeholder = { Text("Pick deadline", color = Color(0xFF94A3B8)) },
+                                    trailingIcon = {
+                                        Text("📅", fontSize = 16.sp, modifier = Modifier.padding(end = 6.dp))
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF0F172A),
+                                        focusedContainerColor = Color(0xFFF8FAFC),
+                                        unfocusedContainerColor = Color(0xFFF8FAFC)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clickable { deadlineDatePickerDialog.show() }
+                                )
+                            }
+
                             OutlinedTextField(
-                                value = endTime,
-                                onValueChange = { endTime = it },
-                                label = { Text("End Time (Auto Delete) *") },
-                                placeholder = { Text("12:00 PM") },
+                                value = fee,
+                                onValueChange = { fee = it },
+                                label = { Text("Fee (Free / ₹)", color = Color(0xFF334155)) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color(0xFF0F172A),
+                                    unfocusedTextColor = Color(0xFF0F172A),
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                ),
                                 modifier = Modifier.weight(1f)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(value = deadline, onValueChange = { deadline = it }, label = { Text("Reg. Deadline *") }, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = fee, onValueChange = { fee = it }, label = { Text("Fee (Free / ₹)") }, modifier = Modifier.weight(1f))
+                        // 🌐 Mode Dropdown (Offline / Online / Hybrid)
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = mode,
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = true,
+                                label = { Text("🌐 Mode of Event (Tap to Choose)", color = Color(0xFF334155), fontWeight = FontWeight.SemiBold) },
+                                trailingIcon = {
+                                    Text("▼", fontSize = 12.sp, color = Color(0xFF475569), modifier = Modifier.padding(end = 12.dp))
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color(0xFF0F172A),
+                                    unfocusedTextColor = Color(0xFF0F172A),
+                                    focusedContainerColor = Color(0xFFF8FAFC),
+                                    unfocusedContainerColor = Color(0xFFF8FAFC)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showModeDropdown = true }
+                            )
+
+                            DropdownMenu(
+                                expanded = showModeDropdown,
+                                onDismissRequest = { showModeDropdown = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                modeOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option, fontWeight = if (mode == option) FontWeight.Bold else FontWeight.Normal, color = Color(0xFF0F172A)) },
+                                        onClick = {
+                                            mode = option
+                                            showModeDropdown = false
+                                        }
+                                    )
+                                }
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(value = mode, onValueChange = { mode = it }, label = { Text("Mode (Offline / Online)") }, modifier = Modifier.fillMaxWidth())
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(value = eligibility, onValueChange = { eligibility = it }, label = { Text("Target Eligibility") }, modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 👨‍🎓 Target Eligibility Dropdown
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = eligibility,
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = true,
+                                label = { Text("👨‍🎓 Target Eligibility (Tap to Choose)", color = Color(0xFF334155), fontWeight = FontWeight.SemiBold) },
+                                trailingIcon = {
+                                    Text("▼", fontSize = 12.sp, color = Color(0xFF475569), modifier = Modifier.padding(end = 12.dp))
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color(0xFF0F172A),
+                                    unfocusedTextColor = Color(0xFF0F172A),
+                                    focusedContainerColor = Color(0xFFF8FAFC),
+                                    unfocusedContainerColor = Color(0xFFF8FAFC)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showEligibilityDropdown = true }
+                            )
+
+                            DropdownMenu(
+                                expanded = showEligibilityDropdown,
+                                onDismissRequest = { showEligibilityDropdown = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                eligibilityOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option, fontWeight = if (eligibility == option) FontWeight.Bold else FontWeight.Normal, color = Color(0xFF0F172A)) },
+                                        onClick = {
+                                            eligibility = option
+                                            showEligibilityDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -658,10 +969,7 @@ fun FacultyEventPublishScreen(
                                 )
                             )
 
-                            // 🔥 Call direct push notification broadcast here instantly!
-                            sendPushNotificationDirectly(faculty.collegeName, title.trim(), selectedCategory!!, deadline.trim())
-
-                            Toast.makeText(context, "🎉 $selectedCategory Published Live & Notification Sent!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "🎉 $selectedCategory Published Live & Synced!", Toast.LENGTH_SHORT).show()
                             title = ""
                             fullDesc = ""
                             registrationLink = ""

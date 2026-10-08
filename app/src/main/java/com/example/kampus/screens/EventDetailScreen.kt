@@ -313,9 +313,9 @@ fun EventDetailScreen(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("📋 Eligibility: ${event.eligibility}", fontSize = 13.sp)
+                    Text("📋 Eligibility: ${event.eligibility}", fontSize = 13.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("📅 Event Date: ${event.eventDate} | Mode: ${event.mode}", fontSize = 13.sp)
+                    Text("📅 Event Date: ${event.eventDate} | Mode: ${event.mode}", fontSize = 13.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("⏰ Reg. Deadline: ${event.deadline}", fontSize = 13.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
@@ -324,9 +324,9 @@ fun EventDetailScreen(
                     Text("💳 Registration Fee: ${event.fee}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("About Event:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("About Event:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF0F172A))
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(event.fullDescription, fontSize = 13.sp, color = Color(0xFF475569), lineHeight = 18.sp)
+                    Text(event.fullDescription, fontSize = 13.sp, color = Color(0xFF334155), lineHeight = 18.sp)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))

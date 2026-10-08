@@ -1,6 +1,5 @@
 package com.example.kampus.screens
 
-import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,26 +26,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.kampus.MongoDBHelper
 import com.example.kampus.models.*
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
-
-// Helper to save picked image to internal storage safely
-fun saveUriToInternalStorage(context: Context, uri: Uri, prefix: String): String {
-    return try {
-        val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-        val file = File(context.filesDir, "${prefix}_${System.currentTimeMillis()}.jpg")
-        val outputStream = FileOutputStream(file)
-        inputStream?.use { input ->
-            outputStream.use { output ->
-                input.copyTo(output)
-            }
-        }
-        file.absolutePath
-    } catch (_: Exception) {
-        uri.toString()
-    }
-}
 
 @Composable
 fun StudentProfileSetupScreen(
@@ -258,9 +237,9 @@ fun FacultyKYCScreen(
 
     val idProofPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val localPath = saveUriToInternalStorage(context, it, "faculty_id_doc")
-            idProofUri = localPath
-            MongoDBHelper.uploadImageToStorage(context, localPath, "faculty_id_proofs") { cloudUrl ->
+            val uriString = it.toString()
+            idProofUri = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "faculty_id_proofs") { cloudUrl ->
                 idProofUri = cloudUrl
             }
         }
@@ -268,9 +247,9 @@ fun FacultyKYCScreen(
 
     val campusEntrancePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val localPath = saveUriToInternalStorage(context, it, "campus_entrance_banner")
-            campusEntranceUri = localPath
-            MongoDBHelper.uploadImageToStorage(context, localPath, "campus_banners") { cloudUrl ->
+            val uriString = it.toString()
+            campusEntranceUri = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_banners") { cloudUrl ->
                 campusEntranceUri = cloudUrl
             }
         }
@@ -278,9 +257,9 @@ fun FacultyKYCScreen(
 
     val campusLayoutPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val localPath = saveUriToInternalStorage(context, it, "campus_layout_blueprint")
-            campusLayoutUri = localPath
-            MongoDBHelper.uploadImageToStorage(context, localPath, "campus_layouts") { cloudUrl ->
+            val uriString = it.toString()
+            campusLayoutUri = uriString
+            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_layouts") { cloudUrl ->
                 campusLayoutUri = cloudUrl
             }
         }

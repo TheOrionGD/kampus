@@ -1,5 +1,6 @@
 package com.example.kampus
 
+import com.example.kampus.models.AppNotification
 import com.example.kampus.models.ChatMessage
 import com.example.kampus.models.CollegeEvent
 import com.example.kampus.models.EventParticipant
@@ -71,5 +72,22 @@ object FirebaseHelper {
 
     fun listenToAllIncomingMessages(userEmail: String, onNewMessage: (String, String) -> Unit) {
         MongoDBHelper.listenToAllIncomingMessages(userEmail, onNewMessage)
+    }
+
+    // --- 🔔 IN-APP NOTIFICATIONS ---
+    fun saveNotification(notification: AppNotification, onComplete: (Boolean) -> Unit) {
+        MongoDBHelper.saveNotification(notification, onComplete)
+    }
+
+    fun listenToNotifications(userId: String, userRole: String, onDataChanged: (List<AppNotification>) -> Unit) {
+        MongoDBHelper.listenToNotifications(userId, userRole, onDataChanged)
+    }
+
+    fun markNotificationAsRead(notificationId: String, onComplete: (Boolean) -> Unit) {
+        MongoDBHelper.markNotificationAsRead(notificationId, onComplete)
+    }
+
+    fun markAllNotificationsAsRead(userId: String, onComplete: (Boolean) -> Unit) {
+        MongoDBHelper.markAllNotificationsAsRead(userId, onComplete)
     }
 }

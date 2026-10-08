@@ -105,6 +105,9 @@ fun PermissionsScreen(
         }
     }
 
+    // Check permissions immediately on composition
+    val permissionsChecked = remember { mutableStateOf(false) }
+    
     // Initial check and auto-refresh on lifecycle resume (e.g. returning from App Settings)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -113,7 +116,10 @@ fun PermissionsScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        refreshPermissionStatuses()
+        if (!permissionsChecked.value) {
+            refreshPermissionStatuses()
+            permissionsChecked.value = true
+        }
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
@@ -142,6 +148,13 @@ fun PermissionsScreen(
     }.mapNotNull { it.permissionManifest }
 
     val allGranted = permissionsList.all { permissionStatusMap[it.id] == true }
+
+    // Auto-continue when all permissions are granted (avoid showing screen again)
+    LaunchedEffect(allGranted) {
+        if (allGranted) {
+            onContinue()
+        }
+    }
 
     Box(
         modifier = Modifier

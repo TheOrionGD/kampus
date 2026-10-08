@@ -792,11 +792,18 @@ fun DeadlinesScreen(
 ) {
     val context = LocalContext.current
 
-    // Strict filtration: Exclude events whose registration deadline day has passed or are expired
+    // Strict filtration: Exclude duplicates and events whose registration deadline day or event date has passed or are expired
     val activeUpcomingEvents = remember(events) {
-        events.filter { !NotificationHelper.isDeadlinePassed(it.deadline) && !it.isExpired() }
+        events.distinctBy { if (it.id.isNotBlank()) it.id else "${it.title.trim().lowercase()}_${it.eventDate}" }
+            .filter { 
+                !NotificationHelper.isDeadlinePassed(it.deadline) && 
+                !NotificationHelper.isDeadlinePassed(it.eventDate) && 
+                !it.isExpired() 
+            }
             .sortedBy { event ->
-                NotificationHelper.parseDeadlineDate(event.deadline)?.time ?: Long.MAX_VALUE
+                NotificationHelper.parseDeadlineDate(event.deadline)?.time 
+                    ?: NotificationHelper.parseDeadlineDate(event.eventDate)?.time 
+                    ?: Long.MAX_VALUE
             }
     }
 
@@ -808,13 +815,13 @@ fun DeadlinesScreen(
             .verticalScroll(rememberScrollState())
     ) {
         Text("⏰ Upcoming Deadlines", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-        Text("Active registration closing dates (strictly filtered by valid deadline)", fontSize = 12.sp, color = Color.Gray)
+        Text("Active registration closing dates (strictly filtered by valid deadline)", fontSize = 12.sp, color = Color(0xFF64748B))
 
         Spacer(modifier = Modifier.height(14.dp))
 
         if (activeUpcomingEvents.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Text("No active upcoming deadlines available.", modifier = Modifier.padding(20.dp), color = Color.Gray)
+                Text("No active upcoming deadlines available.", modifier = Modifier.padding(20.dp), color = Color(0xFF64748B))
             }
         } else {
             activeUpcomingEvents.forEach { event ->
@@ -826,7 +833,7 @@ fun DeadlinesScreen(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(event.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                            Text(event.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF0F172A), modifier = Modifier.weight(1f))
                             Surface(color = Color(0xFFFEF2F2), shape = RoundedCornerShape(6.dp)) {
                                 Text("Deadline: ${event.deadline}", color = Color(0xFFDC2626), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }

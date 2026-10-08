@@ -27,6 +27,8 @@ import com.example.kampus.screens.*
 import com.example.kampus.ui.theme.KampusTheme
 import com.google.firebase.messaging.FirebaseMessaging
 
+import android.util.Log
+
 class MainActivity : ComponentActivity() {
     private var pendingDeepLinkEventId: String? = null
 
@@ -34,18 +36,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create notification channels for rich alerts
-        NotificationHelper.createNotificationChannel(applicationContext)
+        // 1. Centralized channel verification (safe across all Android API levels)
+        NotificationHelper.ensureNotificationChannels(applicationContext)
 
-        // Universal topic subscription for campus-wide alerts
+        // 2. Schedule background WorkManager synchronization for recovery
+        NotificationHelper.schedulePeriodicEventSync(applicationContext)
+
+        // 3. Schedule deadline reminder checks (runs even when app is closed)
+        NotificationHelper.scheduleDeadlineReminderSync(applicationContext)
+
+        // 4. Universal topic subscription for campus-wide alerts
         try {
             FirebaseMessaging.getInstance().subscribeToTopic("college_events")
+                .addOnSuccessListener {
+                    Log.d("KampusFCM", "TOPIC_SUBSCRIBED: Successfully subscribed to 'college_events' topic")
+                }
+                .addOnFailureListener { error ->
+                    Log.e("KampusFCM", "TOPIC_SUBSCRIBE_FAILED: Failed to subscribe to 'college_events': ${error.message}")
+                }
+
             FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
                 if (!token.isNullOrBlank()) {
+                    Log.d("KampusFCM", "FCM token retrieved successfully")
                     MongoDBHelper.registerDeviceFcmToken(token)
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.e("KampusFCM", "Error initializing FCM in MainActivity: ${e.message}")
+        }
 
         // Handle initial deep-linking event ID from notification click
         pendingDeepLinkEventId = intent?.getStringExtra("eventId")
@@ -150,26 +168,22 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
             dataManager.saveParticipants(remoteList)
         }
 
-        val knownEventIds = mutableSetOf<String>()
-        var isFirstLoad = true
-
         MongoDBHelper.listenToEvents { remoteEvents ->
-            if (isFirstLoad) {
-                isFirstLoad = false
-                knownEventIds.addAll(remoteEvents.map { it.id })
-            } else {
-                val newEvents = remoteEvents.filter { it.id !in knownEventIds }
-                for (newEvent in newEvents) {
-                    knownEventIds.add(newEvent.id)
-                    if (currentStudent != null) {
+            for (newEvent in remoteEvents) {
+                val isAlreadyProcessed = NotificationHelper.isEventAlreadyProcessed(context, newEvent.id)
+                if (!isAlreadyProcessed) {
+                    NotificationHelper.markEventAsProcessed(context, newEvent.id)
+                    NotificationHelper.cacheEventLocally(context, newEvent)
+
+                    if (!NotificationHelper.isDeadlinePassed(newEvent.deadline) && !newEvent.isExpired()) {
                         NotificationHelper.notifyEventPublished(context, newEvent)
                     }
                 }
             }
 
             allEvents.clear()
-            allEvents.addAll(remoteEvents)
-            dataManager.saveEvents(remoteEvents)
+            allEvents.addAll(remoteEvents.distinctBy { it.id })
+            dataManager.saveEvents(allEvents.toList())
         }
 
         MongoDBHelper.listenToStudents { remoteStudents ->
@@ -202,7 +216,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                         isVerifiedBySuperAdmin = remoteSuperAdminStatus,
                         isVerifiedByCollegeAdmin = map["isVerifiedByCollegeAdmin"] as? Boolean ?: false,
                         collegePhotoUri = map["collegePhotoUri"] as? String ?: "",
-                        idProofUri = map["idProofUri"] as? String ?: ""
+                        idProofUri = map["idProofUri"] as? String ?: "",
+                        profilePhotoUri = map["profilePhotoUri"] as? String ?: "",
+                        headline = map["headline"] as? String ?: "",
+                        about = map["about"] as? String ?: ""
                     )
                 } catch (_: Exception) {
                     null
@@ -241,7 +258,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                         idProofUri = map["idProofUri"] as? String ?: "",
                         role = if ((map["role"] as? String) == "COLLEGE_ADMIN") FacultyRole.COLLEGE_ADMIN else FacultyRole.DEPT_FACULTY,
                         isVerifiedBySuperAdmin = map["isVerifiedBySuperAdmin"] as? Boolean ?: false,
-                        isVerifiedByCollegeAdmin = map["isVerifiedByCollegeAdmin"] as? Boolean ?: false
+                        isVerifiedByCollegeAdmin = map["isVerifiedByCollegeAdmin"] as? Boolean ?: false,
+                        profilePhotoUri = map["profilePhotoUri"] as? String ?: "",
+                        headline = map["headline"] as? String ?: "",
+                        about = map["about"] as? String ?: ""
                     )
                 } catch (_: Exception) {
                     null
@@ -268,7 +288,48 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         ScreenRoute.SPLASH -> {
             SplashScreen(
                 onSplashFinished = {
-                    route = ScreenRoute.PERMISSIONS
+                    val session = dataManager.getAuthSession()
+                    if (session != null) {
+                        when (session.role) {
+                            "STUDENT" -> {
+                                val savedStudent = dataManager.getCurrentStudent()
+                                    ?: registeredStudents.find { it.email.equals(session.email, ignoreCase = true) }
+                                    ?: dataManager.getStudents().find { it.email.equals(session.email, ignoreCase = true) }
+                                currentStudent = savedStudent ?: StudentUser(
+                                    name = session.email.substringBefore("@").replaceFirstChar { it.uppercase() },
+                                    email = session.email,
+                                    password = "",
+                                    college = "Engineering College",
+                                    department = "Computer Science",
+                                    year = "4th Year"
+                                )
+                                route = ScreenRoute.MAIN_FEED
+                            }
+                            "FACULTY" -> {
+                                val savedFaculty = dataManager.getCurrentFaculty()
+                                    ?: allFaculties.find { it.collegeEmail.equals(session.email, ignoreCase = true) }
+                                    ?: dataManager.getFaculties().find { it.collegeEmail.equals(session.email, ignoreCase = true) }
+                                currentFaculty = savedFaculty ?: FacultyKYC(
+                                    name = session.email.substringBefore("@").replaceFirstChar { it.uppercase() },
+                                    collegeEmail = session.email,
+                                    contactNumber = "",
+                                    password = "",
+                                    collegeName = "Engineering College",
+                                    department = "Computer Science",
+                                    designation = "Assistant Professor"
+                                )
+                                route = ScreenRoute.FACULTY_PORTAL
+                            }
+                            "SUPER_ADMIN" -> {
+                                route = ScreenRoute.SUPER_ADMIN
+                            }
+                            else -> {
+                                route = ScreenRoute.LOGIN
+                            }
+                        }
+                    } else {
+                        route = ScreenRoute.PERMISSIONS
+                    }
                 }
             )
         }
@@ -291,6 +352,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                     val localStudent = registeredStudents.find { it.email.trim().lowercase() == cleanEmail }
                     if (localStudent != null && (localStudent.password.isBlank() || localStudent.password == cleanPassword)) {
                         currentStudent = localStudent
+                        dataManager.saveCurrentStudent(localStudent)
                         route = ScreenRoute.MAIN_FEED
                         Toast.makeText(context, "Welcome back, ${localStudent.name}!", Toast.LENGTH_SHORT).show()
                         return@LoginScreen
@@ -303,6 +365,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                             val idx = registeredStudents.indexOfFirst { it.email.equals(student.email, ignoreCase = true) }
                             if (idx != -1) registeredStudents[idx] = student else registeredStudents.add(student)
                             dataManager.saveStudents(registeredStudents.toList())
+                            dataManager.saveCurrentStudent(student)
                             route = ScreenRoute.MAIN_FEED
                             Toast.makeText(context, "Welcome back, ${student.name}!", Toast.LENGTH_SHORT).show()
                         } else {
@@ -323,6 +386,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                             Toast.makeText(context, "Department Faculty KYC is pending approval by College Admin.", Toast.LENGTH_LONG).show()
                         } else {
                             currentFaculty = localFaculty
+                            dataManager.saveCurrentFaculty(localFaculty)
                             route = ScreenRoute.FACULTY_PORTAL
                             Toast.makeText(context, "Welcome, ${localFaculty.name}!", Toast.LENGTH_SHORT).show()
                         }
@@ -341,6 +405,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                 val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(faculty.collegeEmail, ignoreCase = true) }
                                 if (idx != -1) allFaculties[idx] = faculty else allFaculties.add(faculty)
                                 dataManager.saveFaculties(allFaculties.toList())
+                                dataManager.saveCurrentFaculty(faculty)
                                 route = ScreenRoute.FACULTY_PORTAL
                                 Toast.makeText(context, "Welcome, ${faculty.name}!", Toast.LENGTH_SHORT).show()
                             }
@@ -354,6 +419,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                     val cleanPassword = password.trim()
 
                     if (cleanEmail == "admin@kampus.com" && cleanPassword == "admin123") {
+                        dataManager.saveAuthSession("SUPER_ADMIN", cleanEmail)
                         route = ScreenRoute.SUPER_ADMIN
                         Toast.makeText(context, "Super Admin authenticated", Toast.LENGTH_SHORT).show()
                         return@LoginScreen
@@ -361,6 +427,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
 
                     MongoDBHelper.authenticateSuperAdmin(cleanEmail, cleanPassword) { success, err ->
                         if (success) {
+                            dataManager.saveAuthSession("SUPER_ADMIN", cleanEmail)
                             route = ScreenRoute.SUPER_ADMIN
                             Toast.makeText(context, "Super Admin authenticated", Toast.LENGTH_SHORT).show()
                         } else {
@@ -383,6 +450,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                         registeredStudents.add(newStudent)
                     }
                     dataManager.saveStudents(registeredStudents.toList())
+                    dataManager.saveCurrentStudent(newStudent)
                     MongoDBHelper.saveStudent(newStudent) { _ -> }
                     currentStudent = newStudent
                     route = ScreenRoute.MAIN_FEED
@@ -425,7 +493,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                     "idProofUri" to processedFaculty.idProofUri,
                                     "role" to processedFaculty.role.name,
                                     "isVerifiedBySuperAdmin" to processedFaculty.isVerifiedBySuperAdmin,
-                                    "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin
+                                    "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin,
+                                    "profilePhotoUri" to processedFaculty.profilePhotoUri,
+                                    "headline" to processedFaculty.headline,
+                                    "about" to processedFaculty.about
                                 )
                                 MongoDBHelper.saveFaculty(facultyMap) { _ -> }
 
@@ -447,6 +518,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
             }
 
             SuperAdminScreen(
+                superAdminEmail = dataManager.getAuthSession()?.email ?: "",
                 pendingList = pendingKYCs,
                 allFacultiesList = allFaculties,
                 onFacultyApproved = { facultyToApprove ->
@@ -469,7 +541,12 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                             "role" to updated.role.name,
                             "isVerifiedBySuperAdmin" to true,
                             "collegePhotoUri" to updated.collegePhotoUri,
-                            "idProofUri" to updated.idProofUri
+                            "idProofUri" to updated.idProofUri,
+                            "campusLayoutUri" to updated.campusLayoutUri,
+                            "isVerifiedByCollegeAdmin" to updated.isVerifiedByCollegeAdmin,
+                            "profilePhotoUri" to updated.profilePhotoUri,
+                            "headline" to updated.headline,
+                            "about" to updated.about
                         )
                         MongoDBHelper.saveCollege(updated.collegeName, collegeMap) { success ->
                             if (success) {
@@ -477,11 +554,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                             }
                         }
 
-                        val facultyMap = collegeMap.toMutableMap().apply {
-                            put("campusLayoutUri", updated.campusLayoutUri)
-                            put("isVerifiedByCollegeAdmin", updated.isVerifiedByCollegeAdmin)
-                        }
-                        MongoDBHelper.saveFaculty(facultyMap) { _ -> }
+                        MongoDBHelper.saveFaculty(collegeMap) { _ -> }
 
                         dataManager.saveFaculties(allFaculties.toList())
                     }
@@ -492,6 +565,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                     dataManager.saveFaculties(allFaculties.toList())
                 },
                 onLogout = {
+                    dataManager.clearAuthSession()
                     dataManager.saveFaculties(allFaculties.toList())
                     route = ScreenRoute.LOGIN
                 }
@@ -540,7 +614,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                 "idProofUri" to updatedDeptFac.idProofUri,
                                 "role" to updatedDeptFac.role.name,
                                 "isVerifiedBySuperAdmin" to updatedDeptFac.isVerifiedBySuperAdmin,
-                                "isVerifiedByCollegeAdmin" to true
+                                "isVerifiedByCollegeAdmin" to true,
+                                "profilePhotoUri" to updatedDeptFac.profilePhotoUri,
+                                "headline" to updatedDeptFac.headline,
+                                "about" to updatedDeptFac.about
                             )
                             MongoDBHelper.saveFaculty(facultyMap) { success ->
                                 if (success) {
@@ -573,7 +650,6 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                 val idx = allFaculties.indexOfFirst { it.collegeEmail == processedFaculty.collegeEmail }
                                 if (idx != -1) {
                                     allFaculties[idx] = processedFaculty
-
                                     val facultyMap = mapOf(
                                         "name" to processedFaculty.name,
                                         "collegeEmail" to processedFaculty.collegeEmail,
@@ -589,7 +665,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                         "idProofUri" to processedFaculty.idProofUri,
                                         "role" to processedFaculty.role.name,
                                         "isVerifiedBySuperAdmin" to processedFaculty.isVerifiedBySuperAdmin,
-                                        "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin
+                                        "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin,
+                                        "profilePhotoUri" to processedFaculty.profilePhotoUri,
+                                        "headline" to processedFaculty.headline,
+                                        "about" to processedFaculty.about
                                     )
                                     MongoDBHelper.saveFaculty(facultyMap) { _ -> }
 
@@ -607,7 +686,12 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                             "role" to processedFaculty.role.name,
                                             "isVerifiedBySuperAdmin" to processedFaculty.isVerifiedBySuperAdmin,
                                             "collegePhotoUri" to processedFaculty.collegePhotoUri,
-                                            "idProofUri" to processedFaculty.idProofUri
+                                            "idProofUri" to processedFaculty.idProofUri,
+                                            "campusLayoutUri" to processedFaculty.campusLayoutUri,
+                                            "isVerifiedByCollegeAdmin" to processedFaculty.isVerifiedByCollegeAdmin,
+                                            "profilePhotoUri" to processedFaculty.profilePhotoUri,
+                                            "headline" to processedFaculty.headline,
+                                            "about" to processedFaculty.about
                                         )
                                         MongoDBHelper.saveCollege(processedFaculty.collegeName, collegeMap) { _ -> }
                                     }
@@ -619,7 +703,69 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                             }
                         }
                     },
+                    onUpdateFaculty = { updatedFaculty ->
+                        val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(updatedFaculty.collegeEmail, ignoreCase = true) }
+                        if (idx != -1) {
+                            allFaculties[idx] = updatedFaculty
+                        } else {
+                            allFaculties.add(updatedFaculty)
+                        }
+
+                        val facultyMap = mapOf(
+                            "name" to updatedFaculty.name,
+                            "collegeEmail" to updatedFaculty.collegeEmail,
+                            "contactNumber" to updatedFaculty.contactNumber,
+                            "password" to updatedFaculty.password,
+                            "collegeName" to updatedFaculty.collegeName,
+                            "department" to updatedFaculty.department,
+                            "designation" to updatedFaculty.designation,
+                            "accreditation" to updatedFaculty.accreditation,
+                            "collegeWebsite" to updatedFaculty.collegeWebsite,
+                            "collegePhotoUri" to updatedFaculty.collegePhotoUri,
+                            "campusLayoutUri" to updatedFaculty.campusLayoutUri,
+                            "idProofUri" to updatedFaculty.idProofUri,
+                            "role" to updatedFaculty.role.name,
+                            "isVerifiedBySuperAdmin" to updatedFaculty.isVerifiedBySuperAdmin,
+                            "isVerifiedByCollegeAdmin" to updatedFaculty.isVerifiedByCollegeAdmin,
+                            "profilePhotoUri" to updatedFaculty.profilePhotoUri,
+                            "headline" to updatedFaculty.headline,
+                            "about" to updatedFaculty.about
+                        )
+                        MongoDBHelper.saveFaculty(facultyMap) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Profile synced to cloud!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        if (updatedFaculty.role == FacultyRole.COLLEGE_ADMIN) {
+                            val collegeMap = mapOf(
+                                "name" to updatedFaculty.name,
+                                "collegeName" to updatedFaculty.collegeName,
+                                "designation" to updatedFaculty.designation,
+                                "department" to updatedFaculty.department,
+                                "collegeEmail" to updatedFaculty.collegeEmail,
+                                "contactNumber" to updatedFaculty.contactNumber,
+                                "collegeWebsite" to updatedFaculty.collegeWebsite,
+                                "accreditation" to updatedFaculty.accreditation,
+                                "password" to updatedFaculty.password,
+                                "role" to updatedFaculty.role.name,
+                                "isVerifiedBySuperAdmin" to updatedFaculty.isVerifiedBySuperAdmin,
+                                "collegePhotoUri" to updatedFaculty.collegePhotoUri,
+                                "idProofUri" to updatedFaculty.idProofUri,
+                                "campusLayoutUri" to updatedFaculty.campusLayoutUri,
+                                "isVerifiedByCollegeAdmin" to updatedFaculty.isVerifiedByCollegeAdmin,
+                                "profilePhotoUri" to updatedFaculty.profilePhotoUri,
+                                "headline" to updatedFaculty.headline,
+                                "about" to updatedFaculty.about
+                            )
+                            MongoDBHelper.saveCollege(updatedFaculty.collegeName, collegeMap) { _ -> }
+                        }
+
+                        dataManager.saveFaculties(allFaculties.toList())
+                        currentFaculty = updatedFaculty
+                    },
                     onLogout = {
+                        dataManager.clearAuthSession()
                         dataManager.saveEvents(allEvents.toList())
                         dataManager.saveFaculties(allFaculties.toList())
                         currentFaculty = null
@@ -661,6 +807,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                         coverPhotoUri = coverUrl
                                     )
                                     currentStudent = processedUser
+                                    dataManager.saveCurrentStudent(processedUser)
                                     val idx = registeredStudents.indexOfFirst { it.email.equals(processedUser.email, ignoreCase = true) }
                                     if (idx != -1) {
                                         registeredStudents[idx] = processedUser
@@ -672,6 +819,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                         },
                         onSelectEvent = { selectedEvent = it },
                         onLogout = {
+                            dataManager.clearAuthSession()
                             currentStudent = null
                             route = ScreenRoute.LOGIN
                         }
