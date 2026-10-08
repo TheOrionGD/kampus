@@ -66,10 +66,8 @@ fun ProfileScreen(
             it.collegeName.trim().equals(user.college.trim(), ignoreCase = true) && it.collegePhotoUri.isNotBlank()
         }?.collegePhotoUri ?: ""
     }
-    val defaultCampusBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
     val effectiveCoverModel = ImageLoaderHelper.getSafeImageModel(currentCoverUri)
         ?: ImageLoaderHelper.getSafeImageModel(matchingCampusPhoto)
-        ?: defaultCampusBanner
 
     LaunchedEffect(user.coverPhotoUri, user.profilePhotoUri, user.isOpenToWork) {
         currentCoverUri = user.coverPhotoUri
@@ -413,12 +411,14 @@ fun ProfileScreen(
                             )
                         )
                 ) {
-                    AsyncImage(
-                        model = effectiveCoverModel,
-                        contentDescription = "Cover Photo",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    if (effectiveCoverModel != null) {
+                        AsyncImage(
+                            model = effectiveCoverModel,
+                            contentDescription = "Cover Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
 
                     Row(
                         modifier = Modifier

@@ -433,7 +433,7 @@ class AppDataManager(context: Context) {
                 contactNumber = "9876543210",
                 collegeWebsite = "https://kampus.edu",
                 accreditation = "NAAC A++",
-                collegePhotoUri = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000",
+                collegePhotoUri = "",
                 password = "admin123",
                 role = FacultyRole.COLLEGE_ADMIN,
                 isVerifiedBySuperAdmin = true,

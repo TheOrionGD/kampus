@@ -261,8 +261,7 @@ fun CollegeDirectoryScreen(
                             elevation = CardDefaults.cardElevation(3.dp)
                         ) {
                             Column {
-                                val defaultCampusBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
-                                val displayPhotoModel = ImageLoaderHelper.getSafeImageModel(safePhotoUri) ?: defaultCampusBanner
+                                val displayPhotoModel = ImageLoaderHelper.getSafeImageModel(safePhotoUri)
 
                                 Box(
                                     modifier = Modifier
@@ -293,12 +292,14 @@ fun CollegeDirectoryScreen(
                                         )
                                     }
 
-                                    AsyncImage(
-                                        model = displayPhotoModel,
-                                        contentDescription = college.collegeName,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                    if (displayPhotoModel != null) {
+                                        AsyncImage(
+                                            model = displayPhotoModel,
+                                            contentDescription = college.collegeName,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 }
 
                                 Column(modifier = Modifier.padding(14.dp)) {
@@ -570,8 +571,7 @@ fun CollegeDirectoryScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column {
-                        val defaultBanner = "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1000"
-                        val detailCampusBanner = ImageLoaderHelper.getSafeImageModel(college.collegePhotoUri) ?: defaultBanner
+                        val detailCampusBanner = ImageLoaderHelper.getSafeImageModel(college.collegePhotoUri)
 
                         Box(
                             modifier = Modifier
@@ -602,12 +602,14 @@ fun CollegeDirectoryScreen(
                                 )
                             }
 
-                            AsyncImage(
-                                model = detailCampusBanner,
-                                contentDescription = "Campus Image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            if (detailCampusBanner != null) {
+                                AsyncImage(
+                                    model = detailCampusBanner,
+                                    contentDescription = "Campus Image",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
 
                         Column(modifier = Modifier.padding(16.dp)) {

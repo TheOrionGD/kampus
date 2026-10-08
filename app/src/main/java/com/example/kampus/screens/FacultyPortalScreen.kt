@@ -946,7 +946,7 @@ fun FacultyEventPublishScreen(
                                     fullDescription = fullDesc.trim().ifEmpty { "$selectedCategory conducted by ${faculty.department} at ${faculty.collegeName}." },
                                     prizePool = perks,
                                     targetDept = faculty.department,
-                                    posterUrl = if (savedPosterPath.isNotBlank()) savedPosterPath else "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800",
+                                    posterUrl = savedPosterPath,
                                     externalRegLink = registrationLink.trim(),
                                     customField1Label = c1L,
                                     customField1Value = c1V,
