@@ -22,7 +22,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.kampus.DeadlineReminderWorker
 import com.example.kampus.EventSyncWorker
-import com.example.kampus.FirebaseHelper
+import com.example.kampus.MongoDBHelper
 import com.example.kampus.MainActivity
 import com.example.kampus.models.AppNotification
 import com.google.gson.Gson
@@ -112,6 +112,9 @@ object NotificationHelper {
     const val EVENTS_CHANNEL_ID = "kampus_events_v2"
     const val EVENTS_CHANNEL_NAME = "Events & Announcements"
 
+    const val PUSH_EVENT_CHANNEL_ID = "kampus_event_notifications_v2"
+    const val PUSH_EVENT_CHANNEL_NAME = "Event Notifications"
+
     const val DEADLINES_CHANNEL_ID = "kampus_deadlines_v2"
     const val DEADLINES_CHANNEL_NAME = "Event Deadlines"
 
@@ -133,7 +136,22 @@ object NotificationHelper {
 
             val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-            // 1. Events Channel
+            // 1. Push Event Notifications Channel (README.md Architecture Specification)
+            if (notificationManager.getNotificationChannel(PUSH_EVENT_CHANNEL_ID) == null) {
+                val pushChannel = NotificationChannel(
+                    PUSH_EVENT_CHANNEL_ID,
+                    PUSH_EVENT_CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Real-time push notifications for published campus events"
+                    enableLights(true)
+                    enableVibration(true)
+                    setSound(soundUri, null)
+                }
+                notificationManager.createNotificationChannel(pushChannel)
+            }
+
+            // 2. Events Channel
             if (notificationManager.getNotificationChannel(EVENTS_CHANNEL_ID) == null) {
                 val eventChannel = NotificationChannel(
                     EVENTS_CHANNEL_ID,
@@ -470,7 +488,7 @@ object NotificationHelper {
         val summaryText = "$safeCategory • Registration deadline: $safeDeadline\n$safeEventDate • $safeStartTime"
         val bigBodyText = "$safeTitle\n\nCategory: $safeCategory\nRegistration deadline: $safeDeadline\nEvent date: $safeEventDate\nTime: $safeStartTime"
 
-        val builder = NotificationCompat.Builder(context, EVENTS_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, PUSH_EVENT_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(safeTitle)
             .setContentText("$safeCategory • Deadline: $safeDeadline")
@@ -673,17 +691,11 @@ object NotificationHelper {
             createdAt = System.currentTimeMillis()
         )
 
-        // Save to database
-        FirebaseHelper.saveNotification(notification) { success ->
+        // Save to MongoDB database
+        MongoDBHelper.saveNotification(notification) { success ->
             if (success) {
                 Log.d(TAG, "IN_APP_NOTIFICATION_SAVED: $title for $userId")
             }
-        }
-
-        // Also send FCM push notification if it's an event publication
-        if (type == "EVENT_PUBLISHED" && eventId.isNotBlank()) {
-            // The FCM notification is already handled via the event listener in MainActivity
-            // and MyFirebaseMessagingService
         }
     }
 

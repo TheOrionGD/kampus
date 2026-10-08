@@ -146,15 +146,35 @@ object MongoDBHelper {
         return getDb()?.getCollection(name)
     }
 
-    // 🔔 FCM DEVICE TOKEN REGISTRATION & MANAGEMENT
-    fun registerDeviceFcmToken(token: String, userEmail: String = "", role: String = "STUDENT") {
+    // 🔔 FIREBASE-FREE DEVICE PUSH TOKEN REGISTRATION & MANAGEMENT (MongoDB Atlas)
+    fun registerDevicePushToken(token: String, userEmail: String = "", role: String = "STUDENT", collegeId: String = "col_abc") {
         if (token.isBlank()) return
         scope.launch {
             try {
-                val col = getCollection("fcm_tokens")
+                val col = getCollection("deviceTokens")
                 val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}"
+                val safeEmail = userEmail.trim().lowercase()
+                val doc = Document()
+                    .append("_id", token)
+                    .append("deviceId", token)
+                    .append("pushToken", token)
+                    .append("userId", if (safeEmail.isBlank()) "ALL" else safeEmail)
+                    .append("collegeId", collegeId)
+                    .append("platform", "ANDROID")
+                    .append("role", role)
+                    .append("isActive", true)
+                    .append("status", "ACTIVE")
+                    .append("deviceModel", deviceModel)
+                    .append("lastSeenAt", java.util.Date())
+                    .append("lastUpdated", System.currentTimeMillis())
+                    .append("updatedAt", java.util.Date())
+
+                col?.replaceOne(Filters.eq("_id", token), doc, ReplaceOptions().upsert(true))
+
+                // Also maintain fallback in fcm_tokens for legacy compatibility
+                val fcmCol = getCollection("fcm_tokens")
                 val tokenObj = DeviceFcmToken(
-                    userId = userEmail.trim().lowercase(),
+                    userId = safeEmail,
                     token = token,
                     role = role,
                     status = "ACTIVE",
@@ -162,10 +182,14 @@ object MongoDBHelper {
                     deviceModel = deviceModel
                 )
                 val json = gson.toJson(tokenObj)
-                val doc = Document.parse(json).append("_id", token)
-                col?.replaceOne(Filters.eq("_id", token), doc, ReplaceOptions().upsert(true))
+                val fcmDoc = Document.parse(json).append("_id", token)
+                fcmCol?.replaceOne(Filters.eq("_id", token), fcmDoc, ReplaceOptions().upsert(true))
             } catch (_: Exception) {}
         }
+    }
+
+    fun registerDeviceFcmToken(token: String, userEmail: String = "", role: String = "STUDENT") {
+        registerDevicePushToken(token, userEmail, role)
     }
 
     // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Compressed JPEG Base64 data URL for global cross-device rendering)

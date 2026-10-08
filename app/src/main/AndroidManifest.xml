@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
+    <!-- Foreground Service & Background Push Permissions -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <!-- Background Exact Alarm Permissions for Deadlines -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
@@ -23,7 +27,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Kampus">
+        android:theme="@style/Theme.Kampus"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
@@ -43,14 +48,11 @@
             android:name=".models.EventReminderReceiver"
             android:exported="false" />
 
-        <!-- 🔥 NEW: Firebase Cloud Messaging Service for Cross-Device Push Notifications -->
+        <!-- Firebase-Free Background Push Notification Receiver Service -->
         <service
-            android:name=".MyFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
+            android:name=".KampusPushReceiverService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
     </application>
 

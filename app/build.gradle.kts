@@ -4,7 +4,6 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
 }
 
 val localProperties = Properties()
@@ -92,9 +91,6 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-core:5.3.1")
     implementation("org.mongodb:bson:5.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation(libs.junit)
