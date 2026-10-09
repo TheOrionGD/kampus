@@ -239,8 +239,8 @@ object MongoDBHelper {
     // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Cloudinary CDN upload with Base64 fallback)
     /**
      * Reads image URI synchronously from open InputStream on the calling thread (before URI permissions expire),
-     * compresses & scales it, generates a Base64 data URL immediately so database state is valid,
-     * and asynchronously attempts Cloudinary CDN upload to upgrade to a CDN URL.
+     * compresses & scales it, uploads directly to Cloudinary CDN, and posts the secure CDN URL back to caller
+     * so MongoDB Atlas persists the remote HTTPS Cloudinary URL accessible by all devices.
      */
     fun processPickedImageUri(context: Context, uri: Uri, folderName: String, onResult: (String) -> Unit) {
         try {
@@ -269,26 +269,25 @@ object MongoDBHelper {
             }
             val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
 
-            // 1. Generate Base64 JPEG Data URL as immediate portable payload
-            val outputStream = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
-            val byteArray = outputStream.toByteArray()
-            val base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-            val dataUrl = "data:image/jpeg;base64,$base64"
-
-            // Post base64 data URL immediately to callback so UI state & database have valid image data
-            onResult(dataUrl)
-
-            // 2. Asynchronously upload to Cloudinary CDN for CDN URL upgrade
             scope.launch(Dispatchers.IO) {
                 try {
                     val cdnUrl = CloudinaryHelper.uploadBitmapToCloudinary(scaledBitmap, folderName)
                     if (!cdnUrl.isNullOrBlank()) {
                         mainHandler.post { onResult(cdnUrl) }
+                        return@launch
                     }
                 } catch (e: Exception) {
-                    Log.w("MongoDBHelper", "Cloudinary background upload info: ${e.message}")
+                    Log.w("MongoDBHelper", "Cloudinary background upload warning: ${e.message}")
                 }
+
+                // Fallback: Base64 Data URL if Cloudinary upload fails
+                val outputStream = ByteArrayOutputStream()
+                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
+                val byteArray = outputStream.toByteArray()
+                val base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+                val dataUrl = "data:image/jpeg;base64,$base64"
+
+                mainHandler.post { onResult(dataUrl) }
             }
         } catch (e: Exception) {
             Log.e("MongoDBHelper", "Error processing image URI: ${e.message}")
@@ -301,36 +300,37 @@ object MongoDBHelper {
             onComplete("")
             return
         }
-        if (uriStr.startsWith("http://") || uriStr.startsWith("https://") || uriStr.startsWith("data:image/")) {
+        if (uriStr.startsWith("https://res.cloudinary.com/")) {
             onComplete(uriStr)
             return
         }
 
-        if (context != null && (uriStr.startsWith("content://") || uriStr.startsWith("file://"))) {
-            try {
-                val parsedUri = Uri.parse(uriStr)
-                processPickedImageUri(context, parsedUri, folderName, onComplete)
-                return
-            } catch (_: Exception) {}
-        }
-
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
                 var bitmap: Bitmap? = null
-                if (uriStr.startsWith("/")) {
+                if (uriStr.startsWith("data:image/")) {
+                    try {
+                        val base64Data = uriStr.substringAfter("base64,")
+                        val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                        if (bytes.isNotEmpty()) {
+                            bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        }
+                    } catch (_: Exception) {}
+                } else if (uriStr.startsWith("/")) {
                     val file = File(uriStr)
                     if (file.exists()) {
                         bitmap = BitmapFactory.decodeFile(file.absolutePath)
                     }
-                } else if (context != null) {
-                    val parsedUri = Uri.parse(uriStr)
-                    val inputStream: InputStream? = context.contentResolver.openInputStream(parsedUri)
-                    bitmap = BitmapFactory.decodeStream(inputStream)
-                    inputStream?.close()
+                } else if (context != null && (uriStr.startsWith("content://") || uriStr.startsWith("file://"))) {
+                    try {
+                        val parsedUri = Uri.parse(uriStr)
+                        val inputStream = context.contentResolver.openInputStream(parsedUri)
+                        bitmap = BitmapFactory.decodeStream(inputStream)
+                        inputStream?.close()
+                    } catch (_: Exception) {}
                 }
 
                 if (bitmap != null) {
-                    // Scale down image to optimal size (max width/height 1200px)
                     val maxDim = 1200
                     var width = bitmap.width
                     var height = bitmap.height
@@ -353,9 +353,9 @@ object MongoDBHelper {
                         return@launch
                     }
 
-                    // 2. Fallback: Base64 JPEG data URL if Cloudinary upload is offline or unavailable
+                    // 2. Base64 fallback if Cloudinary upload fails
                     val outputStream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
                     val byteArray = outputStream.toByteArray()
                     val base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP)
                     val dataUrl = "data:image/jpeg;base64,$base64"
@@ -367,7 +367,6 @@ object MongoDBHelper {
                 Log.e("MongoDBHelper", "Error in uploadImageToStorage: ${e.message}")
             }
 
-            // Do not leak device-local content:// or file:// URIs into remote DB
             val safeFallback = if (uriStr.startsWith("http://") || uriStr.startsWith("https://") || uriStr.startsWith("data:image/")) {
                 uriStr
             } else {
