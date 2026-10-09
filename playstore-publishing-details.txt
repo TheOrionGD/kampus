@@ -24,32 +24,35 @@ godfreytrprof@gmail.com,kampus.tester1@gmail.com,kampus.tester2@gmail.com,kampus
 SECTION 2 - PLAY STORE LISTING
 
 7. Short Description
-Discover inter-college events, track registration deadlines, and build teams.
+Discover inter-college events, track registration deadlines, build teams, and earn certificates.
 
 8. Full Description
-Kampus is the all-in-one inter-college event discovery, deadline management, and student networking platform designed for colleges and universities.
+Kampus is the all-in-one inter-college event discovery, deadline management, student networking, and digital credentials platform designed for colleges and universities.
 
-Whether you are looking to participate in hackathons, technical symposiums, cultural fests, sports tournaments, or academic conferences across different campuses, Kampus bridges the gap between students and organizers.
+Whether you are looking to participate in hackathons, technical symposiums, cultural fests, sports tournaments, workshops, or academic conferences across different campuses, Kampus bridges the gap between students, faculty, and college administrators.
 
 Key Benefits for Students:
-- Explore Verified Events: Access inter-college events organized across multiple universities and institutions with real-time updates.
-- Smart Registration Tracking: Filter events by upcoming deadlines, categories, and eligibility. Events automatically update so you never miss a registration window.
-- Exact Deadline Alarms: Set reminders and receive background notifications on critical registration dates.
-- Real-Time Team Finder: Connect with peers across colleges, discover students with complementary skill sets (coding, design, management), view verified certifications, and chat in real-time to form competitive teams.
-- Student Portfolios: Build your academic profile, showcase your achievements, and share certificates with the campus community.
+- Explore Live Database Events: Access verified inter-college events stored dynamically in MongoDB Atlas with real-time sync.
+- Smart Registration Tracking: Filter events by upcoming deadlines, categories, and eligibility. Expired events auto-archive so you never miss an active registration window.
+- Cloudinary CDN Asset Delivery: High-resolution event banners, certificates, and student profile media loaded instantly through Cloudinary CDN.
+- Exact Deadline Alarms & FCM Notifications: Receive background notifications and precise alerts for critical registration closing dates.
+- Real-Time Team Finder: Connect with peers across colleges, discover teammates with complementary skill sets (coding, UI/UX, AI/ML), view verified certificates, and chat to form teams.
+- Digital Student Portfolios: Build your academic profile, showcase your achievements, and manage verifiable certificates.
 
-Key Benefits for Faculty and Organizers:
-- Event Publishing: Publish and manage college events, brochures, and external registration links with instant push notification delivery to all registered students.
-- Campus Management: Maintain college directories, campus maps, department coordinators, and announcements.
+Key Benefits for Faculty and Administrators:
+- Multi-Role Portal (Super Admin, College Admin, Dept Faculty): Granular permission hierarchy to create and verify events, manage student rosters, and publish official campus announcements.
+- Event Publishing & Notification Broadcasts: Publish events with high-resolution imagery stored on Cloudinary CDN and broadcast instant FCM push notifications to registered students.
+- Campus & Department Management: Maintain college directories, campus maps, department coordinators, and announcements.
 
 9. Main Features
-- Inter-College Event Discovery: Centralized portal displaying technical, cultural, management, and sports events from various universities.
-- Automated Deadline Filtration: Intelligent date tracking that displays active upcoming deadlines and filters out expired events.
-- Peer-to-Peer Team Finder: Dedicated matchmaking directory where students can find teammates filtered by skills and events.
-- Real-Time Messaging: One-to-one messaging system for event participants and prospective team partners.
-- Push Notifications and Reminders: Instant notifications for newly published events and scheduled exact alarms for closing deadlines.
-- Student Profile and Certificate Showcase: Profile management featuring bio, skills, past participations, and verifiable certificates.
-- Faculty and Admin Portal: Verification system for college coordinators to publish events, post announcements, and view registrations.
+- Inter-College Event Discovery: Dynamic portal displaying technical, cultural, management, and sports events loaded live from MongoDB Atlas database.
+- Cloud Image Integration: Cloudinary CDN integration for fast, reliable image uploading and optimization across all event, certificate, and profile media.
+- Automated Deadline Filtration: Intelligent date tracking that displays active upcoming deadlines and filters out past events.
+- Peer-to-Peer Team Finder: Dedicated directory to discover teammates filtered by skills, department, and event criteria.
+- Real-Time Direct Messaging: In-app chat system for event participants and prospective team partners.
+- FCM Push Notifications & Reminders: Instant notifications via Firebase Cloud Messaging for newly published events and scheduled exact alarms for closing deadlines.
+- Multi-Role Access Control: Specialized interfaces and administrative controls for Super Admins, College Admins, Department Faculty, and Students.
+- Digital Certificates & Student Portfolios: Verified student profiles featuring bios, skills, past participations, and uploaded certificates.
 
 10. App Icon
 Upload 512 x 512 PNG/JPEG icon (Generated adaptive launcher asset in res/mipmap).
@@ -66,20 +69,21 @@ Upload 1024 x 500 PNG/JPEG promotional graphic banner.
 
 SECTION 3 - APPLICATION BUILD
 
-14. Final Android App Bundle (AAB)
-Uploaded signed release bundle: app-release.aab (located at app/build/outputs/bundle/release/app-release.aab)
+14. Final Android App Bundle (AAB) & APK
+- Release Bundle (AAB): app-release.aab (located at app/build/outputs/bundle/release/app-release.aab)
+- Release Package (APK): app-release.apk (located at app/build/outputs/apk/release/app-release.apk)
 
 15. Version Name
-1.0
+2.1.3
 
 16. Version Code
-1
+7
 
 17. Has the final application been tested?
 - Yes
 
 18. Are the major application features working correctly?
-- Yes
+- Yes (Verified full authentication, MongoDB Atlas live persistence, Cloudinary CDN media uploads, FCM push notifications, and release builds).
 
 
 SECTION 4 - PRIVACY AND DATA SAFETY
@@ -91,10 +95,10 @@ SECTION 4 - PRIVACY AND DATA SAFETY
 - No
 
 21. What types of data does the application collect?
-- Personal information (Name, Email address, Phone number, College name, Department, Academic Year)
-- Photos / Storage (Profile pictures, cover photos, certificate attachments)
+- Personal information (Name, Email address, Phone number, College name, Department, Academic Year, User Role)
+- Photos / Media Storage (Profile pictures, event banners, certificate attachments uploaded to Cloudinary CDN)
 - Device information (Firebase Cloud Messaging device registration tokens)
-- App activity (Event registrations, team finder requests, direct chat messages)
+- App activity (Event registrations, team finder requests, direct chat messages, announcements)
 
 22. Privacy Policy URL
 https://theoriongd.github.io/kampus/privacy-policy.html
@@ -106,7 +110,11 @@ https://theoriongd.github.io/kampus/privacy-policy.html
 - Yes
 
 25. List the third-party services or SDKs used
-Firebase Cloud Messaging (FCM), MongoDB Atlas Cloud Driver, Coil Image Loader, Google Gson.
+- MongoDB Atlas Cloud Database (MongoDB Java Sync Driver 4.11.1)
+- Cloudinary Image CDN (Cloudinary REST API & Unsigned Upload Preset)
+- Firebase Cloud Messaging (FCM Push Notifications SDK)
+- Coil Compose (2.6.0 Async Image Loader)
+- Google Gson (2.10.1 JSON Parser)
 
 
 SECTION 5 - ADS AND PERMISSIONS
@@ -125,11 +133,11 @@ SECTION 5 - ADS AND PERMISSIONS
 - SMS (android.permission.SEND_SMS)
 
 29. Explain why these permissions are required
-- POST_NOTIFICATIONS: Required to notify students about newly published college events, urgent deadline reminders, and direct messages from teammates.
-- SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: Required to trigger exact-time deadline alerts and calendar reminders even when the app is in the background or killed.
-- RECEIVE_BOOT_COMPLETED: Required to reschedule active deadline reminders and alarms when the user restarts their phone.
-- INTERNET: Required to communicate with Firebase Cloud Messaging and MongoDB Atlas to fetch live event listings and team directory data.
-- SEND_SMS: Used as an optional fallback for offline emergency contact with event coordinators.
+- POST_NOTIFICATIONS: Required to deliver realtime FCM notifications to students regarding newly published college events, deadline reminders, and direct messages.
+- SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: Required to schedule precise deadline alarms and calendar reminders even when the app is running in the background.
+- RECEIVE_BOOT_COMPLETED: Required to re-register active deadline alarms when the user's device reboots.
+- INTERNET: Required for secure communication with MongoDB Atlas cloud database, Cloudinary CDN media server, and FCM push servers.
+- SEND_SMS: Used as an optional direct contact method with event coordinators.
 
 
 SECTION 6 - TARGET AUDIENCE AND CONTENT
@@ -142,53 +150,71 @@ SECTION 6 - TARGET AUDIENCE AND CONTENT
 - No
 
 32. Does the application contain user-generated content?
-- Yes
+- Yes (Event posts, team recruitment messages, student bios, uploaded profile & certificate media)
 
 33. Does the application provide social interaction or user-to-user communication?
-- Yes
+- Yes (Direct user-to-user chat, team finder requests)
 
 
 SECTION 7 - REVIEWER ACCESS
 
 34. Does the application require login?
-- Yes
+- Yes (All reviewer test accounts have been seeded and verified live in the MongoDB Atlas database).
 
-35. Test Account Email / Username
-Student Account: student.test@kampus.edu
-Faculty Account: faculty.admin@kampus.edu
+35. Test Account Credentials for Reviewers
 
-36. Test Account Password
-KampusPass123!
+a) Super Admin Account:
+- Email: admin@kampus.com (or admin@kampus.edu)
+- Password: admin123
+- Access: Full platform management, system settings, global metrics, and user management.
 
-37. OTP / PIN / Special Access Instructions
-The application supports direct sign-in with the test account without requiring a two-factor SMS OTP or hardware token. Reviewers can also enter student mode directly from the onboarding screen.
+b) College Admin Account:
+- Email: collegeadmin@kampus.edu
+- Password: admin123
+- Access: Campus-wide event creation, college announcement publishing, and department oversight.
 
-38. Reviewer Instructions
-1. Open the Kampus application.
-2. On the Onboarding screen, select Student (or sign in with student.test@kampus.edu).
-3. In the Home Tab, browse available college events, filter by category, or open an event to view full descriptions and register.
-4. Open the Team Finder Tab to browse registered participants, view full student profiles with verified skills and certificates, and tap Direct Chat to test messaging.
-5. Open the Profile & Deadlines Tab to view active upcoming deadlines and personal certificates.
-6. Switch to Faculty Mode to test event publishing and immediate notification broadcasting.
+c) Department Faculty Account:
+- Email: faculty@kampus.edu
+- Password: faculty123
+- Access: Department-level event creation, broadcast notifications, student verification.
+
+d) Student Account 1:
+- Email: student1@kampus.edu
+- Password: student123
+- Access: Event discovery, registration, team finder, Cloudinary profile/certificate upload, direct messaging.
+
+e) Student Account 2:
+- Email: student2@kampus.edu
+- Password: student2@husky/student123 (Password: student123)
+- Access: Peer student profile, team request responder, messaging partner.
+
+36. OTP / PIN / Special Access Instructions
+The application supports direct email & password authentication without requiring two-factor SMS OTP or hardware tokens. Reviewers can sign in using any of the role credentials above.
+
+37. Step-by-Step Reviewer Guide
+1. Launch the Kampus app. The login screen presents clear fields for Email and Password.
+2. Sign in as Student (`student1@kampus.edu` / `student123`).
+3. In the Home Tab: View live events fetched from MongoDB Atlas. Tap an event to read full details, view Cloudinary-hosted banners, or register.
+4. In the Team Finder Tab: Browse student profiles, filter by skills, and send a direct chat message.
+5. In the Profile & Deadlines Tab: View personal student profile, uploaded certificates (powered by Cloudinary CDN), and active registration deadline reminders.
+6. Log out and sign in as College Admin (`collegeadmin@kampus.edu` / `admin123`) or Department Faculty (`faculty@kampus.edu` / `faculty123`) to test creating new events with Cloudinary image upload and triggering push notifications.
 
 
 SECTION 8 - FINAL CONFIRMATION
 
-39. Application Readiness Checklist
-- Final application build is ready
-- Final AAB file has been uploaded
-- App icon is ready
-- Screenshots are ready
-- Short description is ready
-- Full description is ready
-- Privacy Policy is available
-- Data Safety information has been checked
-- Login/test account has been provided if required
-- Application has been tested
-- All submitted information is accurate
+38. Application Readiness Checklist
+- Final application build is ready (APK & AAB generated)
+- Final AAB file ready at app/build/outputs/bundle/release/app-release.aab
+- Version Code set to 7 and Version Name set to 2.1.3
+- Live database persistence verified with MongoDB Atlas
+- Cloudinary CDN media uploads verified
+- Push notification server verified
+- All 5 role-based reviewer test accounts seeded and verified
+- App icon and graphics ready
+- Privacy Policy is live
 
-40. Pending Issues / Comments
-None. All functional modules, MongoDB Atlas storage, FCM push notifications, strict deadline filtering, and signed release builds are verified.
+39. Pending Issues / Comments
+None. The codebase is fully synchronized with live MongoDB Atlas database storage, Cloudinary CDN asset uploads, FCM notification services, and signed release artifacts (`versionCode 7`, `versionName 2.1.3`).
 
-41. Final Confirmation
-I confirm that the information and files submitted by my team are accurate and ready for Play Store review.
+40. Final Confirmation
+I confirm that the information and files submitted are accurate, tested, and ready for Google Play Store publication and review.
