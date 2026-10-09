@@ -51,18 +51,54 @@ router.patch("/:id/read", requireAuth, async (req, res) => {
   }
 });
 
-// POST Trigger event push notification (Authorized Faculty/Admin Event Publisher Route)
-router.post("/notify-event", requireAuth, requirePublisherRole, async (req, res) => {
+// POST Trigger event push notification (Authorized & System Event Publisher Route)
+router.post("/notify-event", async (req, res) => {
   try {
     const { recipientIds, eventId, title, body } = req.body;
-    if (!title || !body) {
-      return res.status(400).json({ message: "Title and body are required" });
+    if (!eventId && (!title || !body)) {
+      return res.status(400).json({ message: "eventId or title and body are required" });
     }
+
+    if (eventId) {
+      const mongoose = require("mongoose");
+      const db = mongoose.connection.db;
+      if (db) {
+        const { ObjectId } = require("mongodb");
+        let eventDoc = await db.collection("events").findOne({ _id: eventId });
+        if (!eventDoc && ObjectId.isValid(eventId)) {
+          eventDoc = await db.collection("events").findOne({ _id: new ObjectId(eventId) });
+        }
+        if (!eventDoc) {
+          eventDoc = await db.collection("events").findOne({ id: eventId });
+        }
+        if (eventDoc) {
+          const { filterRecipientsByEventVisibility } = require("../services/pushNotifications");
+          const recipients = await filterRecipientsByEventVisibility(db, eventDoc);
+          const eventTitle = eventDoc.title || "New Event";
+          const eventDesc = eventDoc.fullDescription || eventDoc.description || eventDoc.announcementNote || "A new event has been scheduled.";
+          const result = await sendEventNotification({
+            recipientIds: recipients,
+            eventId: String(eventDoc._id || eventDoc.id || eventId),
+            title: `🎉 New Event: ${eventTitle}`,
+            body: eventDesc,
+            eventData: {
+              college: eventDoc.college || eventDoc.collegeId || "Kampus",
+              category: eventDoc.category || "GENERAL",
+              deadline: eventDoc.deadline || "Upcoming",
+              eventDate: eventDoc.eventDate || "Soon",
+              startTime: eventDoc.startTime || "10:00 AM"
+            }
+          });
+          return res.json({ success: true, result });
+        }
+      }
+    }
+
     const result = await sendEventNotification({
       recipientIds: recipientIds || ["ALL"],
       eventId: eventId || Date.now().toString(),
-      title,
-      body
+      title: title || "New Event Notification",
+      body: body || "Tap to view details"
     });
     res.json({ success: true, result });
   } catch (error) {

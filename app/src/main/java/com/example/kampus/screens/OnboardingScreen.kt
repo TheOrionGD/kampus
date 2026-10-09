@@ -237,30 +237,24 @@ fun FacultyKYCScreen(
 
     val idProofPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            idProofUri = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "faculty_id_proofs") { cloudUrl ->
-                idProofUri = cloudUrl
+            MongoDBHelper.processPickedImageUri(context, it, "faculty_id_proofs") { safeUrl ->
+                idProofUri = safeUrl
             }
         }
     }
 
     val campusEntrancePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            campusEntranceUri = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_banners") { cloudUrl ->
-                campusEntranceUri = cloudUrl
+            MongoDBHelper.processPickedImageUri(context, it, "campus_banners") { safeUrl ->
+                campusEntranceUri = safeUrl
             }
         }
     }
 
     val campusLayoutPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            campusLayoutUri = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_layouts") { cloudUrl ->
-                campusLayoutUri = cloudUrl
+            MongoDBHelper.processPickedImageUri(context, it, "campus_layouts") { safeUrl ->
+                campusLayoutUri = safeUrl
             }
         }
     }

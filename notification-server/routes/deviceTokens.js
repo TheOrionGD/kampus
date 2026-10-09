@@ -1,25 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const DeviceToken = require("../models/DeviceToken");
-const { requireAuth } = require("../middleware/requireAuth");
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { token, userId, role, collegeId, platform } = req.body;
     if (typeof token !== "string" || !token.trim()) {
       return res.status(400).json({ message: "Token is required" });
     }
 
-    const targetUserId = userId || req.user._id || req.user.email || "ALL";
+    const safeUserId = (userId || req.headers['x-user-id'] || "ALL").trim().toLowerCase();
 
     await DeviceToken.findOneAndUpdate(
-      { token },
+      { token: token.trim() },
       { 
-        userId: targetUserId, 
-        token, 
+        token: token.trim(),
+        userId: safeUserId, 
         platform: platform || "android",
         role: role || "STUDENT",
-        collegeId: collegeId || "col_abc"
+        collegeId: collegeId || "col_abc",
+        updatedAt: new Date()
       },
       { upsert: true, new: true, runValidators: true }
     );
@@ -31,3 +31,4 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+

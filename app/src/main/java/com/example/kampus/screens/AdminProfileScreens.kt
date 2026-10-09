@@ -58,7 +58,7 @@ fun FacultyProfileScreen(
 
     val coverPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            MongoDBHelper.uploadImageToStorage(context, it.toString(), "campus_banners") { cloudDataUrl ->
+            MongoDBHelper.processPickedImageUri(context, it, "campus_banners") { cloudDataUrl ->
                 currentCoverUri = cloudDataUrl
                 onUpdateFaculty(faculty.copy(collegePhotoUri = cloudDataUrl))
                 Toast.makeText(context, "Cover Photo Saved to Cloud!", Toast.LENGTH_SHORT).show()
@@ -68,7 +68,7 @@ fun FacultyProfileScreen(
 
     val avatarPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            MongoDBHelper.uploadImageToStorage(context, it.toString(), "faculty_avatars") { cloudDataUrl ->
+            MongoDBHelper.processPickedImageUri(context, it, "faculty_avatars") { cloudDataUrl ->
                 currentProfileUri = cloudDataUrl
                 onUpdateFaculty(faculty.copy(profilePhotoUri = cloudDataUrl))
                 Toast.makeText(context, "Profile Photo Saved to Cloud!", Toast.LENGTH_SHORT).show()
@@ -730,7 +730,7 @@ fun SuperAdminProfileScreen(
 
     val avatarPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            MongoDBHelper.uploadImageToStorage(context, it.toString(), "super_admin_avatars") { cloudDataUrl ->
+            MongoDBHelper.processPickedImageUri(context, it, "super_admin_avatars") { cloudDataUrl ->
                 currentProfileUri = cloudDataUrl
                 val current = adminProfile
                 if (current != null) {

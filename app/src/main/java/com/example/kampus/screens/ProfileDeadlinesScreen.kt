@@ -77,7 +77,7 @@ fun ProfileScreen(
 
     val coverPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            MongoDBHelper.uploadImageToStorage(context, it.toString(), "student_covers") { cloudDataUrl ->
+            MongoDBHelper.processPickedImageUri(context, it, "student_covers") { cloudDataUrl ->
                 currentCoverUri = cloudDataUrl
                 val updated = user.copy(coverPhotoUri = cloudDataUrl)
                 onUpdateUser(updated)
@@ -88,7 +88,7 @@ fun ProfileScreen(
 
     val avatarPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            MongoDBHelper.uploadImageToStorage(context, it.toString(), "student_avatars") { cloudDataUrl ->
+            MongoDBHelper.processPickedImageUri(context, it, "student_avatars") { cloudDataUrl ->
                 currentProfileUri = cloudDataUrl
                 val updated = user.copy(profilePhotoUri = cloudDataUrl)
                 onUpdateUser(updated)
@@ -300,7 +300,7 @@ fun ProfileScreen(
 
         val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
-                MongoDBHelper.uploadImageToStorage(context, it.toString(), "student_posts") { cloudUrl ->
+                MongoDBHelper.processPickedImageUri(context, it, "student_posts") { cloudUrl ->
                     postImagePath = cloudUrl
                 }
             }

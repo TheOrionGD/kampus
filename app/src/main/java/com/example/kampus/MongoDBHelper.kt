@@ -237,6 +237,65 @@ object MongoDBHelper {
     }
 
     // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Cloudinary CDN upload with Base64 fallback)
+    /**
+     * Reads image URI synchronously from open InputStream on the calling thread (before URI permissions expire),
+     * compresses & scales it, generates a Base64 data URL immediately so database state is valid,
+     * and asynchronously attempts Cloudinary CDN upload to upgrade to a CDN URL.
+     */
+    fun processPickedImageUri(context: Context, uri: Uri, folderName: String, onResult: (String) -> Unit) {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            if (originalBitmap == null) {
+                onResult("")
+                return
+            }
+
+            // Scale down to max 1200px
+            val maxDim = 1200
+            var width = originalBitmap.width
+            var height = originalBitmap.height
+            if (width > maxDim || height > maxDim) {
+                val ratio = width.toFloat() / height.toFloat()
+                if (ratio > 1) {
+                    width = maxDim
+                    height = (maxDim / ratio).toInt()
+                } else {
+                    height = maxDim
+                    width = (maxDim * ratio).toInt()
+                }
+            }
+            val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+
+            // 1. Generate Base64 JPEG Data URL as immediate portable payload
+            val outputStream = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
+            val byteArray = outputStream.toByteArray()
+            val base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+            val dataUrl = "data:image/jpeg;base64,$base64"
+
+            // Post base64 data URL immediately to callback so UI state & database have valid image data
+            onResult(dataUrl)
+
+            // 2. Asynchronously upload to Cloudinary CDN for CDN URL upgrade
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val cdnUrl = CloudinaryHelper.uploadBitmapToCloudinary(scaledBitmap, folderName)
+                    if (!cdnUrl.isNullOrBlank()) {
+                        mainHandler.post { onResult(cdnUrl) }
+                    }
+                } catch (e: Exception) {
+                    Log.w("MongoDBHelper", "Cloudinary background upload info: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MongoDBHelper", "Error processing image URI: ${e.message}")
+            onResult("")
+        }
+    }
+
     fun uploadImageToStorage(context: Context?, uriStr: String, folderName: String, onComplete: (String) -> Unit) {
         if (uriStr.isBlank()) {
             onComplete("")
@@ -245,6 +304,14 @@ object MongoDBHelper {
         if (uriStr.startsWith("http://") || uriStr.startsWith("https://") || uriStr.startsWith("data:image/")) {
             onComplete(uriStr)
             return
+        }
+
+        if (context != null && (uriStr.startsWith("content://") || uriStr.startsWith("file://"))) {
+            try {
+                val parsedUri = Uri.parse(uriStr)
+                processPickedImageUri(context, parsedUri, folderName, onComplete)
+                return
+            } catch (_: Exception) {}
         }
 
         scope.launch {

@@ -269,21 +269,17 @@ fun FacultyEventPublishScreen(
 
     val posterPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            savedPosterPath = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "event_posters") { cloudUrl ->
-                savedPosterPath = cloudUrl
+            MongoDBHelper.processPickedImageUri(context, it, "event_posters") { safeUrl ->
+                savedPosterPath = safeUrl
             }
         }
     }
 
     val campusBannerPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            currentCampusBannerUri = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_banners") { cloudUrl ->
-                currentCampusBannerUri = cloudUrl
-                val updatedFaculty = faculty.copy(collegePhotoUri = cloudUrl)
+            MongoDBHelper.processPickedImageUri(context, it, "campus_banners") { safeUrl ->
+                currentCampusBannerUri = safeUrl
+                val updatedFaculty = faculty.copy(collegePhotoUri = safeUrl)
                 val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
                 if (idx != -1) allFaculties[idx] = updatedFaculty
                 onUpdateFacultyLayout(updatedFaculty)
@@ -294,11 +290,9 @@ fun FacultyEventPublishScreen(
 
     val blueprintPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val uriString = it.toString()
-            currentLayoutUri = uriString
-            MongoDBHelper.uploadImageToStorage(context, uriString, "campus_layouts") { cloudUrl ->
-                currentLayoutUri = cloudUrl
-                val updatedFaculty = faculty.copy(campusLayoutUri = cloudUrl)
+            MongoDBHelper.processPickedImageUri(context, it, "campus_layouts") { safeUrl ->
+                currentLayoutUri = safeUrl
+                val updatedFaculty = faculty.copy(campusLayoutUri = safeUrl)
                 val idx = allFaculties.indexOfFirst { f -> f.collegeEmail == faculty.collegeEmail }
                 if (idx != -1) allFaculties[idx] = updatedFaculty
                 onUpdateFacultyLayout(updatedFaculty)

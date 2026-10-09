@@ -13,11 +13,12 @@ function getFirebaseAdmin() {
     throw new Error("Firebase environment variables are missing (FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_JSON)");
   }
   const serviceAccount = JSON.parse(serviceAccountJson);
+  const privateKey = serviceAccount.private_key ? serviceAccount.private_key.replace(/\\n/g, '\n') : undefined;
   firebaseApp = admin.initializeApp({
     credential: admin.credential.cert({
       projectId,
       clientEmail: serviceAccount.client_email,
-      privateKey: serviceAccount.private_key,
+      privateKey: privateKey,
     }),
   });
   return admin;
