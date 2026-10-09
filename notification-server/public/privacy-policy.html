@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Kampus Mobile Application</title>
+    <meta name="description" content="Privacy Policy for Kampus inter-college event discovery and student networking application. Learn about how we handle user data, media storage, and security.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #13192b;
+            --bg-card-hover: #1b233a;
+            --accent-primary: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --border-color: #1f293d;
+            --success-color: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Header & Navigation */
+        header {
+            background: rgba(19, 25, 43, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        /* Hero Banner */
+        .hero {
+            padding: 4rem 2rem 3rem 2rem;
+            text-align: center;
+            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .hero-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 650px;
+            margin: 0 auto 1.5rem auto;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            flex-wrap: wrap;
+        }
+
+        /* Content Container */
+        .container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Card Section */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.2s ease;
+        }
+
+        .section-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-number {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-primary);
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-size: 0.98rem;
+        }
+
+        ul {
+            list-style: none;
+            margin: 1rem 0;
+            padding: 0;
+        }
+
+        li {
+            color: var(--text-muted);
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .highlight-box {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: 4px 8px 8px 4px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 0.93rem;
+        }
+
+        /* Tech Table */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.03);
+            color: white;
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        /* Contact & Action CTA */
+        .cta-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--accent-gradient);
+            color: white;
+            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 30px;
+            text-decoration: none;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transition: transform 0.2s ease;
+            margin-top: 1rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 600px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            .section-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <a href="/" class="brand">
+                <div class="brand-logo">K</div>
+                <span class="brand-title">Kampus</span>
+            </a>
+            <div class="badge-live">
+                <span class="badge-dot"></span> Effective Oct 2026
+            </div>
+        </div>
+    </header>
+
+    <div class="hero">
+        <h1 class="hero-title">Privacy Policy</h1>
+        <p class="hero-subtitle">Learn how Kampus collects, protects, and handles user data for inter-college event discovery, team matching, and academic portfolios.</p>
+        <div class="meta-info">
+            <span>Application Version: 2.1.3 (Build 7)</span>
+            <span>•</span>
+            <span>Package: com.example.kampus</span>
+            <span>•</span>
+            <span>Last Updated: October 9, 2026</span>
+        </div>
+    </div>
+
+    <main class="container">
+
+        <!-- 1. Introduction -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">1</span> Introduction</h2>
+            <p>Welcome to <strong>Kampus</strong> ("we", "our", or "us"). Kampus is an inter-college event discovery, deadline management, student team finder, and academic credentials platform designed for students, faculty, and university administrators.</p>
+            <p>We respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains our practices regarding the collection, storage, use, and disclosure of your information when you use our mobile application and backend services.</p>
+        </div>
+
+        <!-- 2. Data Collection -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">2</span> Information We Collect</h2>
+            <p>To provide a functional campus networking and event discovery experience, Kampus collects the following categories of data:</p>
+            <ul>
+                <li><strong>Account & Profile Information:</strong> Name, academic email address, college/university name, department, academic year, user role (Student, Faculty, College Admin, Super Admin), bio, and verified skills.</li>
+                <li><strong>Photos & Media Storage:</strong> Profile photos, cover banners, project attachments, and verifiable certificate documents. All uploaded media is processed and stored securely via <strong>Cloudinary CDN</strong>.</li>
+                <li><strong>Device & FCM Registration Tokens:</strong> Device identification tokens collected for Firebase Cloud Messaging (FCM) to deliver realtime push notifications regarding event updates, registration deadlines, and direct messages.</li>
+                <li><strong>Application Activity:</strong> Event registrations, direct chat messages between team partners, deadline alarm reminders, and campus announcements.</li>
+            </ul>
+        </div>
+
+        <!-- 3. How We Use Data -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">3</span> How We Use Your Information</h2>
+            <p>We utilize the collected data strictly for providing and improving Kampus core features:</p>
+            <ul>
+                <li><strong>Event Discovery & Live Feeds:</strong> Presenting dynamic college events stored and synchronized in real-time via <strong>MongoDB Atlas</strong> cloud database.</li>
+                <li><strong>Peer-to-Peer Team Finder:</strong> Enabling students to find teammates based on skill sets, department, and event participation.</li>
+                <li><strong>Real-Time Notifications:</strong> Dispatching urgent registration closing alerts, calendar alarms, and event announcements via Firebase Cloud Messaging.</li>
+                <li><strong>Role-Based Access Control:</strong> Verifying administrative permissions for faculty and college administrators to post events and broadcast announcements.</li>
+            </ul>
+        </div>
+
+        <!-- 4. Third-Party Services -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">4</span> Third-Party Services & Infrastructure</h2>
+            <p>Kampus integrates industry-standard third-party SDKs and cloud infrastructure services to power its features:</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Third-Party Service</th>
+                            <th>Purpose</th>
+                            <th>Data Handled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>MongoDB Atlas Cloud</strong></td>
+                            <td>Database Persistence & Realtime Sync</td>
+                            <td>User profiles, event documents, team requests</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cloudinary CDN</strong></td>
+                            <td>Media Asset Storage & Delivery</td>
+                            <td>Uploaded profile pictures, event banners, certificates</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Firebase Cloud Messaging (FCM)</strong></td>
+                            <td>Push Notification Delivery</td>
+                            <td>Device registration tokens, notification payloads</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Coil Compose</strong></td>
+                            <td>Image Cache & Async Display</td>
+                            <td>Transient image cache on client device</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. Permissions -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">5</span> Android App Permissions</h2>
+            <p>The application requests the following Android permissions to function properly:</p>
+            <ul>
+                <li><code>android.permission.POST_NOTIFICATIONS</code>: Required to send realtime background notifications for upcoming event deadlines and direct messages.</li>
+                <li><code>android.permission.SCHEDULE_EXACT_ALARM</code> / <code>USE_EXACT_ALARM</code>: Used to schedule precise deadline alarms on your device.</li>
+                <li><code>android.permission.RECEIVE_BOOT_COMPLETED</code>: Required to reschedule active deadline alarms after device reboots.</li>
+                <li><code>android.permission.INTERNET</code>: Required for database communication, Cloudinary media loading, and push notifications.</li>
+            </ul>
+        </div>
+
+        <!-- 6. Data Sharing & Disclosure -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">6</span> Data Sharing & Disclosure</h2>
+            <div class="highlight-box">
+                <p><strong>We do NOT sell, rent, or trade your personal data with third-party advertisers or marketing networks.</strong></p>
+            </div>
+            <p>Your profile information (Name, College, Skills, Bio, Certificates) is visible to other verified students and campus coordinators within the app directory to facilitate team matching and event participation.</p>
+        </div>
+
+        <!-- 7. Data Retention & Deletion -->
+        <div class="section-card">
+            <h2 class="section-title"><span class="section-number">7</span> Data Security & Account Deletion</h2>
+            <p>We implement robust transport security (HTTPS/TLS) for all network communications with MongoDB Atlas and Cloudinary CDN.</p>
+            <p><strong>Account & Data Deletion Requests:</strong> Users have the right to request deletion of their profile, uploaded certificates, and account data at any time. You can request account deletion directly within the application or by sending an email to <a href="mailto:support@kampus.edu" style="color: var(--accent-primary);">support@kampus.edu</a> with the subject "Data Deletion Request".</p>
+        </div>
+
+        <!-- 8. Contact -->
+        <div class="cta-card">
+            <h2 style="color: white; font-family: 'Outfit', sans-serif; font-size: 1.6rem; margin-bottom: 0.5rem;">Questions or Concerns?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">If you have any questions regarding this Privacy Policy or your data safety, please reach out to our team.</p>
+            <p style="color: white; font-weight: 600;">Email: support@kampus.edu</p>
+            <a href="https://github.com/TheOrionGD/kampus" target="_blank" class="cta-button">Visit GitHub Repository</a>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Kampus Platform. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

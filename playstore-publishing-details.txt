@@ -101,7 +101,8 @@ SECTION 4 - PRIVACY AND DATA SAFETY
 - App activity (Event registrations, team finder requests, direct chat messages, announcements)
 
 22. Privacy Policy URL
-https://theoriongd.github.io/kampus/privacy-policy.html
+https://kampus-notification-server.onrender.com/privacy-policy
+(Fallback: https://theoriongd.github.io/kampus/privacy-policy.html)
 
 23. Can users request deletion of their data?
 - Yes

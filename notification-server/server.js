@@ -19,6 +19,12 @@ try {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
+
+// Privacy Policy Endpoint
+app.get(['/privacy-policy', '/privacy-policy.html'], (req, res) => {
+    res.sendFile(__dirname + '/public/privacy-policy.html');
+});
 
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -41,6 +47,7 @@ app.get('/', (req, res) => {
         version: '2.0.0',
         endpoints: {
             health: 'GET /health',
+            privacyPolicy: 'GET /privacy-policy',
             deviceTokens: 'POST /api/device-tokens',
             pushSend: 'POST /api/push/send',
             notifyEvent: 'POST /api/notifications/notify-event',
