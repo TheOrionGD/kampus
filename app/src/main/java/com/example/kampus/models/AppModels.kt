@@ -199,7 +199,8 @@ data class CollegeEvent(
     val customField1Label: String = "",
     val customField1Value: String = "",
     val customField2Label: String = "",
-    val customField2Value: String = ""
+    val customField2Value: String = "",
+    val status: String = "PUBLISHED"
 ) {
     constructor() : this("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "")
 

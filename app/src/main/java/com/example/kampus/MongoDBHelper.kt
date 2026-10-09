@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.util.Log
 import com.example.kampus.models.AdminUser
 import com.example.kampus.models.AppNotification
 import com.example.kampus.models.ChatMessage
@@ -252,9 +253,17 @@ object MongoDBHelper {
                     mainHandler.post { onComplete(dataUrl) }
                     return@launch
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e("MongoDBHelper", "Error in uploadImageToStorage: ${e.message}")
+            }
 
-            mainHandler.post { onComplete(uriStr) }
+            // Do not leak device-local content:// or file:// URIs into remote DB
+            val safeFallback = if (uriStr.startsWith("http://") || uriStr.startsWith("https://") || uriStr.startsWith("data:image/")) {
+                uriStr
+            } else {
+                ""
+            }
+            mainHandler.post { onComplete(safeFallback) }
         }
     }
 
@@ -918,6 +927,32 @@ object MongoDBHelper {
                 }
             } catch (e: Throwable) {
                 mainHandler.post { onResult(null, e.message ?: "Authentication failed (Timeout)") }
+            }
+        }
+    }
+
+    fun triggerServerEventNotification(eventId: String) {
+        scope.launch(Dispatchers.IO) {
+            val endpoints = listOf(
+                "http://10.0.2.2:3000/api/notifications/notify-event",
+                "http://localhost:3000/api/notifications/notify-event"
+            )
+            for (ep in endpoints) {
+                try {
+                    val url = java.net.URL(ep)
+                    val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        connectTimeout = 4000
+                        readTimeout = 4000
+                    }
+                    val payload = gson.toJson(mapOf("eventId" to eventId, "timestamp" to System.currentTimeMillis()))
+                    conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                    val code = conn.responseCode
+                    Log.d("MongoDBHelper", "Triggered server event notification API ($ep), code: $code")
+                    if (code == 200) break
+                } catch (_: Exception) {}
             }
         }
     }

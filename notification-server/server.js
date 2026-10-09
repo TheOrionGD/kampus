@@ -118,10 +118,10 @@ app.post('/api/notifications/notify-event', async (req, res) => {
 async function processPublishedEvent(eventDoc) {
     if (!db) return;
 
-    const eventId = eventDoc._id ? eventDoc._id.toString() : eventDoc.id;
-    const collegeId = eventDoc.collegeId || 'col_abc';
+    const eventId = eventDoc._id ? eventDoc._id.toString() : (eventDoc.id || String(Date.now()));
+    const collegeId = eventDoc.collegeId || eventDoc.college || 'col_abc';
     const title = eventDoc.title || 'New Event';
-    const description = eventDoc.description || 'A new event has been scheduled.';
+    const description = eventDoc.fullDescription || eventDoc.description || eventDoc.announcementNote || 'A new event has been scheduled.';
     const category = eventDoc.category || 'GENERAL';
 
     console.log(`\n==================================================`);
@@ -129,28 +129,53 @@ async function processPublishedEvent(eventDoc) {
     console.log(`[NotificationProcessor] College: ${collegeId} | Title: ${title}`);
 
     try {
-        // Query ALL users matching collegeId (or all users if cross-college) across ALL roles (Students, Faculty, College Admins, Super Admins)
-        const userQuery = collegeId && collegeId !== 'ALL' ? { collegeId: collegeId } : {};
-        const targetUsers = await db.collection('users').find(userQuery).toArray();
-        console.log(`[NotificationProcessor] Identified ${targetUsers.length} total target users across all roles.`);
+        // Query ALL users across 'students', 'college_faculties', and 'users' collections
+        const [studentsList, facultiesList, genericUsersList] = await Promise.all([
+            db.collection('students').find({}).toArray().catch(() => []),
+            db.collection('college_faculties').find({}).toArray().catch(() => []),
+            db.collection('users').find({}).toArray().catch(() => [])
+        ]);
+
+        const allTargetUsersMap = new Map();
+
+        const addUserToMap = (u) => {
+            const email = (u.email || u.collegeEmail || (u._id ? u._id.toString() : '')).trim().toLowerCase();
+            if (email && !allTargetUsersMap.has(email)) {
+                allTargetUsersMap.set(email, { email, raw: u });
+            }
+        };
+
+        studentsList.forEach(addUserToMap);
+        facultiesList.forEach(addUserToMap);
+        genericUsersList.forEach(addUserToMap);
+
+        // Always include broadcast "ALL" target
+        allTargetUsersMap.set('ALL', { email: 'ALL', raw: {} });
+
+        console.log(`[NotificationProcessor] Identified ${allTargetUsersMap.size} unique target identities.`);
 
         let notificationsCreated = 0;
         let pushDispatches = 0;
 
-        for (const user of targetUsers) {
-            const userId = user.email || user._id.toString();
-
-            // 1. Create or update notification record in 'notifications' collection (Section 17)
+        for (const [userId] of allTargetUsersMap) {
+            // 1. Create or update notification record in 'notifications' collection
             const notifDoc = {
                 _id: `${eventId}_${userId}`,
                 userId: userId,
+                userRole: 'STUDENT',
                 eventId: eventId,
                 collegeId: collegeId,
-                title: `New Event: ${title}`,
+                title: `🎉 New Event: ${title}`,
+                message: description,
                 body: description,
+                type: 'EVENT',
                 isRead: false,
-                createdAt: new Date()
+                createdAt: SystemDateOrNow()
             };
+
+            function SystemDateOrNow() {
+                return new Date();
+            }
 
             await db.collection('notifications').replaceOne(
                 { _id: notifDoc._id },
@@ -158,69 +183,67 @@ async function processPublishedEvent(eventDoc) {
                 { upsert: true }
             );
             notificationsCreated++;
+        }
 
-            // 2. Find all active devices for this student in 'deviceTokens' (Section 6 - Multiple devices per student)
-            const devices = await db.collection('deviceTokens').find({
-                userId: userId,
-                isActive: true
-            }).toArray();
+        // 2. Query all active devices across 'device_push_tokens', 'deviceTokens', and 'fcm_tokens'
+        const [tokens1, tokens2, tokens3] = await Promise.all([
+            db.collection('device_push_tokens').find({}).toArray().catch(() => []),
+            db.collection('deviceTokens').find({}).toArray().catch(() => []),
+            db.collection('fcm_tokens').find({}).toArray().catch(() => [])
+        ]);
 
-            for (const device of devices) {
-                const deviceId = device.deviceId || device.pushToken;
-                const deliveryId = `${eventId}_${userId}_${deviceId}`;
-
-                // 3. Idempotency Check / Duplicate Prevention (Section 19)
-                const existingDelivery = await db.collection('notificationDeliveries').findOne({ _id: deliveryId });
-                if (existingDelivery && existingDelivery.status === 'SENT') {
-                    console.log(`[NotificationProcessor] Idempotency Skip: Already delivered to device ${deviceId}`);
-                    continue;
-                }
-
-                // 4. Record pending delivery state
-                const deliveryRecord = {
-                    _id: deliveryId,
-                    notificationId: notifDoc._id,
-                    userId: userId,
-                    deviceId: deviceId,
-                    status: 'PROCESSING',
-                    attempts: (existingDelivery ? existingDelivery.attempts + 1 : 1),
-                    sentAt: new Date(),
-                    error: null
-                };
-
-                await db.collection('notificationDeliveries').replaceOne(
-                    { _id: deliveryId },
-                    deliveryRecord,
-                    { upsert: true }
-                );
-
-                // 5. Dispatch via Firebase-free Push Gateway (Section 4 & 13)
-                const pushPayload = {
-                    title: `New Event: ${title}`,
-                    body: `${description} (${eventDoc.eventDate || 'Upcoming'})`,
-                    data: {
-                        type: 'EVENT',
-                        eventId: eventId,
-                        collegeId: collegeId,
-                        category: category
-                    }
-                };
-
-                const clientStream = connectedPushClients.get(deviceId) || connectedPushClients.get(device.pushToken);
-                if (clientStream) {
-                    clientStream.write(`data: ${JSON.stringify(pushPayload)}\n\n`);
-                    deliveryRecord.status = 'SENT';
-                    pushDispatches++;
-                } else {
-                    deliveryRecord.status = 'SENT'; // Queued in MongoDB for Android polling/re-connect
-                    pushDispatches++;
-                }
-
-                await db.collection('notificationDeliveries').updateOne(
-                    { _id: deliveryId },
-                    { $set: { status: deliveryRecord.status, sentAt: new Date() } }
-                );
+        const allDevices = [...tokens1, ...tokens2, ...tokens3];
+        const uniqueDevicesMap = new Map();
+        for (const dev of allDevices) {
+            const deviceId = dev.token || dev.deviceId || dev.pushToken || (dev._id ? dev._id.toString() : '');
+            if (deviceId && !uniqueDevicesMap.has(deviceId)) {
+                uniqueDevicesMap.set(deviceId, dev);
             }
+        }
+
+        for (const [deviceId, device] of uniqueDevicesMap) {
+            const deliveryId = `${eventId}_${deviceId}`;
+
+            // Idempotency Check / Duplicate Prevention
+            const existingDelivery = await db.collection('notificationDeliveries').findOne({ _id: deliveryId });
+            if (existingDelivery && existingDelivery.status === 'SENT') {
+                continue;
+            }
+
+            const deliveryRecord = {
+                _id: deliveryId,
+                eventId: eventId,
+                deviceId: deviceId,
+                status: 'PROCESSING',
+                sentAt: new Date()
+            };
+
+            const pushPayload = {
+                title: `🎉 New Event: ${title}`,
+                body: `${description}`,
+                data: {
+                    type: 'EVENT',
+                    eventId: eventId,
+                    collegeId: collegeId,
+                    category: category
+                }
+            };
+
+            const clientStream = connectedPushClients.get(deviceId) || connectedPushClients.get(device.pushToken);
+            if (clientStream) {
+                clientStream.write(`data: ${JSON.stringify(pushPayload)}\n\n`);
+                deliveryRecord.status = 'SENT';
+                pushDispatches++;
+            } else {
+                deliveryRecord.status = 'SENT';
+                pushDispatches++;
+            }
+
+            await db.collection('notificationDeliveries').replaceOne(
+                { _id: deliveryId },
+                deliveryRecord,
+                { upsert: true }
+            );
         }
 
         console.log(`[NotificationProcessor] Summary: ${notificationsCreated} notifications saved, ${pushDispatches} push dispatches completed.`);
@@ -230,7 +253,7 @@ async function processPublishedEvent(eventDoc) {
     }
 }
 
-// --- 3. MongoDB Change Stream / Trigger Initialization (Section 11) ---
+// --- 3. MongoDB Change Stream / Trigger Initialization ---
 
 async function startNotificationProcessorServer() {
     try {
@@ -244,11 +267,7 @@ async function startNotificationProcessorServer() {
         const changeStream = eventsCollection.watch([
             {
                 $match: {
-                    $or: [
-                        { operationType: 'insert', 'fullDocument.status': 'PUBLISHED' },
-                        { operationType: 'update', 'updateDescription.updatedFields.status': 'PUBLISHED' },
-                        { operationType: 'replace', 'fullDocument.status': 'PUBLISHED' }
-                    ]
+                    operationType: { $in: ['insert', 'update', 'replace'] }
                 }
             }
         ], { fullDocument: 'updateLookup' });
@@ -256,12 +275,12 @@ async function startNotificationProcessorServer() {
         changeStream.on('change', (change) => {
             const eventDoc = change.fullDocument;
             if (eventDoc) {
-                console.log(`[ChangeStream] MongoDB detected published event: ${eventDoc.title}`);
+                console.log(`[ChangeStream] MongoDB detected event creation/update: ${eventDoc.title}`);
                 processPublishedEvent(eventDoc);
             }
         });
 
-        console.log(`[ChangeStream] Listening for MongoDB Atlas event triggers (status = PUBLISHED)...`);
+        console.log(`[ChangeStream] Listening for MongoDB Atlas event triggers...`);
 
         app.listen(PORT, () => {
             console.log(`[Server] Kampus Notification Processor Server running on port ${PORT}`);

@@ -129,13 +129,63 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         }
     }
 
-    // Register Device Push Token with current student identity upon login
+    // Register Device Push Token & start Push Service upon login for Students
     LaunchedEffect(currentStudent?.email) {
         currentStudent?.let { user ->
             try {
                 val deviceId = KampusPushReceiverService.getDeviceId(context)
                 MongoDBHelper.registerDevicePushToken(deviceId, user.email, "STUDENT")
+                KampusPushReceiverService.startService(context)
             } catch (_: Exception) {}
+        }
+    }
+
+    // Register Device Push Token & start Push Service upon login for Faculty
+    LaunchedEffect(currentFaculty?.collegeEmail) {
+        currentFaculty?.let { fac ->
+            try {
+                val deviceId = KampusPushReceiverService.getDeviceId(context)
+                MongoDBHelper.registerDevicePushToken(deviceId, fac.collegeEmail, fac.role.name)
+                KampusPushReceiverService.startService(context)
+            } catch (_: Exception) {}
+        }
+    }
+
+    // Live In-App Notification Stream Listener for logged in Student or Faculty
+    val activeEmail = currentStudent?.email ?: currentFaculty?.collegeEmail ?: ""
+    val activeRole = if (currentStudent != null) "STUDENT" else if (currentFaculty != null) currentFaculty?.role?.name ?: "FACULTY" else ""
+    if (activeEmail.isNotBlank()) {
+        LaunchedEffect(activeEmail) {
+            MongoDBHelper.listenToNotifications(activeEmail, activeRole) { remoteNotifs ->
+                for (notif in remoteNotifs) {
+                    val notifKey = "notif_${notif.id}"
+                    if (!notif.isRead && !NotificationHelper.isEventAlreadyProcessed(context, notifKey)) {
+                        NotificationHelper.markEventAsProcessed(context, notifKey)
+                        val ev = CollegeEvent(
+                            id = notif.eventId.ifBlank { System.currentTimeMillis().toString() },
+                            title = notif.title,
+                            college = "Kampus Platform",
+                            category = notif.type,
+                            deadline = "Register Now",
+                            eventDate = "Upcoming",
+                            startTime = "10:00 AM",
+                            endTime = "12:00 PM",
+                            mode = "Offline",
+                            eligibility = "All Students",
+                            fee = "Free",
+                            coordinatorName = "Campus Convener",
+                            coordinatorRole = "Faculty",
+                            postedTime = "Just now",
+                            announcementNote = "",
+                            fullDescription = notif.message,
+                            prizePool = "",
+                            targetDept = "All Departments",
+                            posterUrl = ""
+                        )
+                        NotificationHelper.notifyEventPublished(context, ev)
+                    }
+                }
+            }
         }
     }
 
@@ -164,21 +214,22 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         var isInitialEventsSync = true
         MongoDBHelper.listenToEvents { remoteEvents ->
             if (isInitialEventsSync) {
-                // Initial load: Mark all pre-existing events as processed so old historical events don't spam notifications on launch
+                // Initial load: Notify for any recent unexpired events
                 for (ev in remoteEvents) {
                     val eventTime = ev.id.toLongOrNull() ?: 0L
-                    val isVeryRecent = eventTime > 0L && (System.currentTimeMillis() - eventTime) < 10 * 60 * 1000L
+                    val isVeryRecent = eventTime > 0L && (System.currentTimeMillis() - eventTime) < 30 * 60 * 1000L
                     
-                    NotificationHelper.markEventAsProcessed(context, ev.id)
-                    NotificationHelper.cacheEventLocally(context, ev)
-
-                    if (isVeryRecent && !NotificationHelper.isDeadlinePassed(ev.deadline) && !ev.isExpired()) {
-                        NotificationHelper.notifyEventPublished(context, ev)
+                    if (isVeryRecent && !NotificationHelper.isEventAlreadyProcessed(context, ev.id)) {
+                        NotificationHelper.markEventAsProcessed(context, ev.id)
+                        NotificationHelper.cacheEventLocally(context, ev)
+                        if (!NotificationHelper.isDeadlinePassed(ev.deadline) && !ev.isExpired()) {
+                            NotificationHelper.notifyEventPublished(context, ev)
+                        }
                     }
                 }
                 isInitialEventsSync = false
             } else {
-                // Real-time updates: Instantly notify for newly posted events
+                // Real-time updates: Instantly notify for newly posted events across all logged in users
                 for (newEvent in remoteEvents) {
                     val isAlreadyProcessed = NotificationHelper.isEventAlreadyProcessed(context, newEvent.id)
                     if (!isAlreadyProcessed) {
@@ -227,6 +278,7 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                         isVerifiedBySuperAdmin = remoteSuperAdminStatus,
                         isVerifiedByCollegeAdmin = map["isVerifiedByCollegeAdmin"] as? Boolean ?: false,
                         collegePhotoUri = map["collegePhotoUri"] as? String ?: "",
+                        campusLayoutUri = map["campusLayoutUri"] as? String ?: "",
                         idProofUri = map["idProofUri"] as? String ?: "",
                         profilePhotoUri = map["profilePhotoUri"] as? String ?: "",
                         headline = map["headline"] as? String ?: "",
@@ -238,7 +290,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
             }
             if (mappedFaculties.isNotEmpty()) {
                 for (remoteCol in mappedFaculties) {
-                    val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(remoteCol.collegeEmail, ignoreCase = true) }
+                    val idx = allFaculties.indexOfFirst {
+                        (remoteCol.collegeEmail.isNotBlank() && it.collegeEmail.equals(remoteCol.collegeEmail, ignoreCase = true)) ||
+                        (remoteCol.collegeName.isNotBlank() && it.collegeName.equals(remoteCol.collegeName, ignoreCase = true))
+                    }
                     if (idx != -1) {
                         allFaculties[idx] = allFaculties[idx].copy(
                             isVerifiedBySuperAdmin = allFaculties[idx].isVerifiedBySuperAdmin || remoteCol.isVerifiedBySuperAdmin,
@@ -288,7 +343,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
             }
             if (mappedDeptFaculties.isNotEmpty()) {
                 for (remoteFac in mappedDeptFaculties) {
-                    val idx = allFaculties.indexOfFirst { it.collegeEmail.equals(remoteFac.collegeEmail, ignoreCase = true) }
+                    val idx = allFaculties.indexOfFirst {
+                        (remoteFac.collegeEmail.isNotBlank() && it.collegeEmail.equals(remoteFac.collegeEmail, ignoreCase = true)) ||
+                        (remoteFac.role == FacultyRole.COLLEGE_ADMIN && remoteFac.collegeName.isNotBlank() && it.collegeName.equals(remoteFac.collegeName, ignoreCase = true))
+                    }
                     if (idx != -1) {
                         allFaculties[idx] = allFaculties[idx].copy(
                             isVerifiedBySuperAdmin = allFaculties[idx].isVerifiedBySuperAdmin || remoteFac.isVerifiedBySuperAdmin,
@@ -623,6 +681,8 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
                                         "EVENT_PUBLISHED",
                                         processedEvent.id
                                     )
+                                    // 4. Trigger server push notification API endpoint
+                                    MongoDBHelper.triggerServerEventNotification(processedEvent.id)
                                 }
                             }
                             allEvents.add(0, processedEvent)

@@ -247,7 +247,13 @@ fun CollegeDirectoryScreen(
                     items(sortedColleges) { (college, city, distKm) ->
                         val isMyCampus = distKm == 0.0
                         val totalEventsCount = allEvents.count { it.college.equals(college.collegeName, ignoreCase = true) }
-                        val safePhotoUri = college.collegePhotoUri ?: ""
+                        val safePhotoUri = if (!college.collegePhotoUri.isNullOrBlank()) {
+                            college.collegePhotoUri
+                        } else {
+                            allCollegesList.firstOrNull {
+                                it.collegeName.trim().equals(college.collegeName.trim(), ignoreCase = true) && !it.collegePhotoUri.isNullOrBlank()
+                            }?.collegePhotoUri ?: ""
+                        }
 
                         Card(
                             modifier = Modifier
@@ -571,7 +577,14 @@ fun CollegeDirectoryScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column {
-                        val detailCampusBanner = ImageLoaderHelper.getSafeImageModel(college.collegePhotoUri)
+                        val resolvedDetailPhoto = if (!college.collegePhotoUri.isNullOrBlank()) {
+                            college.collegePhotoUri
+                        } else {
+                            allCollegesList.firstOrNull {
+                                it.collegeName.trim().equals(college.collegeName.trim(), ignoreCase = true) && !it.collegePhotoUri.isNullOrBlank()
+                            }?.collegePhotoUri ?: ""
+                        }
+                        val detailCampusBanner = ImageLoaderHelper.getSafeImageModel(resolvedDetailPhoto)
 
                         Box(
                             modifier = Modifier
