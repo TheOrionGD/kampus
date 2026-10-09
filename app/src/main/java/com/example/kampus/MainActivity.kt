@@ -386,48 +386,10 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         ScreenRoute.SPLASH -> {
             SplashScreen(
                 onSplashFinished = {
-                    val session = dataManager.getAuthSession()
-                    if (session != null) {
-                        when (session.role) {
-                            "STUDENT" -> {
-                                val savedStudent = dataManager.getCurrentStudent()
-                                    ?: registeredStudents.find { it.email.equals(session.email, ignoreCase = true) }
-                                    ?: dataManager.getStudents().find { it.email.equals(session.email, ignoreCase = true) }
-                                currentStudent = savedStudent ?: StudentUser(
-                                    name = session.email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                                    email = session.email,
-                                    password = "",
-                                    college = "Engineering College",
-                                    department = "Computer Science",
-                                    year = "4th Year"
-                                )
-                                route = ScreenRoute.MAIN_FEED
-                            }
-                            "FACULTY" -> {
-                                val savedFaculty = dataManager.getCurrentFaculty()
-                                    ?: allFaculties.find { it.collegeEmail.equals(session.email, ignoreCase = true) }
-                                    ?: dataManager.getFaculties().find { it.collegeEmail.equals(session.email, ignoreCase = true) }
-                                currentFaculty = savedFaculty ?: FacultyKYC(
-                                    name = session.email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                                    collegeEmail = session.email,
-                                    contactNumber = "",
-                                    password = "",
-                                    collegeName = "Engineering College",
-                                    department = "Computer Science",
-                                    designation = "Assistant Professor"
-                                )
-                                route = ScreenRoute.FACULTY_PORTAL
-                            }
-                            "SUPER_ADMIN" -> {
-                                route = ScreenRoute.SUPER_ADMIN
-                            }
-                            else -> {
-                                route = ScreenRoute.LOGIN
-                            }
-                        }
-                    } else {
-                        route = ScreenRoute.PERMISSIONS
-                    }
+                    dataManager.clearAuthSession()
+                    currentStudent = null
+                    currentFaculty = null
+                    route = ScreenRoute.LOGIN
                 }
             )
         }
