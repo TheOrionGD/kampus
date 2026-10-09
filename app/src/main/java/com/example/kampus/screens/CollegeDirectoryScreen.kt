@@ -186,21 +186,9 @@ fun CollegeDirectoryScreen(
                         color = Color(0xFF0F172A)
                     )
                     Text(
-                        text = "Auto-sorted by proximity to ${currentUser.college}",
+                        text = "Explore accredited colleges & campus events",
                         fontSize = 12.sp,
                         color = Color(0xFF64748B)
-                    )
-                }
-                Surface(
-                    color = Color(0xFFEFF6FF),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Text(
-                        "📍 Nearby Live",
-                        color = Color(0xFF2563EB),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -318,20 +306,25 @@ fun CollegeDirectoryScreen(
                                             text = college.collegeName.uppercase(),
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF0F172A)
+                                            color = Color(0xFF0F172A),
+                                            maxLines = 2,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
                                         )
 
-                                        Surface(
-                                            color = if (isMyCampus) Color(0xFFDCFCE7) else Color(0xFFFEF3C7),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                text = if (isMyCampus) "📍 Home Campus" else "📍 $city",
-                                                color = if (isMyCampus) Color(0xFF15803D) else Color(0xFF92400E),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                            )
+                                        if (city.isNotBlank()) {
+                                            Surface(
+                                                color = Color(0xFFEFF6FF),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = "📍 $city",
+                                                    color = Color(0xFF2563EB),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
                                         }
                                     }
 
@@ -366,7 +359,9 @@ fun CollegeDirectoryScreen(
                                             text = "Accreditation: $safeAccreditation",
                                             fontSize = 12.sp,
                                             color = Color(0xFF059669),
-                                            fontWeight = FontWeight.SemiBold
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
                                     }
 
@@ -378,6 +373,8 @@ fun CollegeDirectoryScreen(
                                             fontSize = 12.sp,
                                             color = Color(0xFF2563EB),
                                             fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                             modifier = Modifier.clickable {
                                                 try {
                                                     val url = if (!safeWebsite.startsWith("http")) "https://$safeWebsite" else safeWebsite
@@ -640,17 +637,19 @@ fun CollegeDirectoryScreen(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
                             )
-                            Surface(
-                                color = Color(0xFFFEF3C7),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = if (distKm == 0.0) "Your College" else "📍 $city",
-                                    color = Color(0xFF92400E),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                            if (city.isNotBlank()) {
+                                Surface(
+                                    color = Color(0xFFEFF6FF),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "📍 $city",
+                                        color = Color(0xFF1D4ED8),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
 

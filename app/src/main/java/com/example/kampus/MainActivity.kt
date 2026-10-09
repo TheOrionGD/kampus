@@ -45,13 +45,19 @@ class MainActivity : ComponentActivity() {
         // 3. Schedule deadline reminder checks (runs even when app is closed)
         NotificationHelper.scheduleDeadlineReminderSync(applicationContext)
 
-        // 4. Register Firebase-free device push token with MongoDB Atlas & start Push Service
+        // 4. Register Firebase FCM device push token with MongoDB Atlas
         try {
-            val deviceId = KampusPushReceiverService.getDeviceId(applicationContext)
-            MongoDBHelper.registerDevicePushToken(deviceId)
-            KampusPushReceiverService.startService(applicationContext)
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val fcmToken = task.result
+                        Log.d("KampusFCM", "FCM Device Token: $fcmToken")
+                        MongoDBHelper.registerDeviceFcmToken(fcmToken)
+                    }
+                }
+            KampusFcmService.subscribeToEventsTopic()
         } catch (e: Exception) {
-            Log.e("KampusPush", "Error initializing push service in MainActivity: ${e.message}")
+            Log.e("KampusFCM", "Error initializing FCM in MainActivity: ${e.message}")
         }
 
         // Handle initial deep-linking event ID from notification click
@@ -129,24 +135,32 @@ fun KampusApp(initialDeepLinkEventId: String? = null) {
         }
     }
 
-    // Register Device Push Token & start Push Service upon login for Students
+    // Register Device FCM Token upon login for Students
     LaunchedEffect(currentStudent?.email) {
         currentStudent?.let { user ->
             try {
-                val deviceId = KampusPushReceiverService.getDeviceId(context)
-                MongoDBHelper.registerDevicePushToken(deviceId, user.email, "STUDENT")
-                KampusPushReceiverService.startService(context)
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            MongoDBHelper.registerDeviceFcmToken(task.result, user.email, "STUDENT")
+                        }
+                    }
+                KampusFcmService.subscribeToEventsTopic()
             } catch (_: Exception) {}
         }
     }
 
-    // Register Device Push Token & start Push Service upon login for Faculty
+    // Register Device FCM Token upon login for Faculty
     LaunchedEffect(currentFaculty?.collegeEmail) {
         currentFaculty?.let { fac ->
             try {
-                val deviceId = KampusPushReceiverService.getDeviceId(context)
-                MongoDBHelper.registerDevicePushToken(deviceId, fac.collegeEmail, fac.role.name)
-                KampusPushReceiverService.startService(context)
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            MongoDBHelper.registerDeviceFcmToken(task.result, fac.collegeEmail, fac.role.name)
+                        }
+                    }
+                KampusFcmService.subscribeToEventsTopic()
             } catch (_: Exception) {}
         }
     }

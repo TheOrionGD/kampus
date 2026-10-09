@@ -182,15 +182,58 @@ object MongoDBHelper {
                     lastUpdated = System.currentTimeMillis(),
                     deviceModel = deviceModel
                 )
-                val json = gson.toJson(tokenObj)
-                val fcmDoc = Document.parse(json).append("_id", token)
-                fcmCol?.replaceOne(Filters.eq("_id", token), fcmDoc, ReplaceOptions().upsert(true))
+                // Also send FCM token to Render Express backend (/api/device-tokens)
+                registerFcmTokenWithRenderBackend(token, safeEmail, role, collegeId)
             } catch (_: Exception) {}
         }
     }
 
     fun registerDeviceFcmToken(token: String, userEmail: String = "", role: String = "STUDENT") {
         registerDevicePushToken(token, userEmail, role)
+    }
+
+    fun registerFcmTokenWithRenderBackend(
+        fcmToken: String,
+        userId: String = "",
+        role: String = "STUDENT",
+        collegeId: String = "col_abc",
+        authToken: String = ""
+    ) {
+        scope.launch(Dispatchers.IO) {
+            val backendEndpoints = listOf(
+                "https://kampus-notification-server.onrender.com/api/device-tokens",
+                "http://10.0.2.2:3000/api/device-tokens",
+                "http://localhost:3000/api/device-tokens"
+            )
+            val safeUser = if (userId.isBlank()) "ALL" else userId.trim().lowercase()
+            val payload = gson.toJson(mapOf(
+                "token" to fcmToken,
+                "userId" to safeUser,
+                "role" to role,
+                "collegeId" to collegeId,
+                "platform" to "android"
+            ))
+            for (endpoint in backendEndpoints) {
+                try {
+                    val connection = java.net.URL(endpoint).openConnection() as java.net.HttpURLConnection
+                    connection.requestMethod = "POST"
+                    if (authToken.isNotBlank()) {
+                        connection.setRequestProperty("Authorization", "Bearer $authToken")
+                    }
+                    connection.setRequestProperty("X-User-Id", safeUser)
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.connectTimeout = 4000
+                    connection.readTimeout = 4000
+                    connection.doOutput = true
+                    connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                    val code = connection.responseCode
+                    Log.d("MongoDBHelper", "Registered FCM token with backend ($endpoint), code: $code")
+                    if (code in 200..299) break
+                } catch (e: Exception) {
+                    Log.w("MongoDBHelper", "FCM backend token registration attempt error ($endpoint): ${e.message}")
+                }
+            }
+        }
     }
 
     // 🖼️ UNIVERSAL IMAGE CLOUD STORAGE HELPER (Cloudinary CDN upload with Base64 fallback)
@@ -934,6 +977,7 @@ object MongoDBHelper {
     fun triggerServerEventNotification(eventId: String) {
         scope.launch(Dispatchers.IO) {
             val endpoints = listOf(
+                "https://kampus-notification-server.onrender.com/api/notifications/notify-event",
                 "http://10.0.2.2:3000/api/notifications/notify-event",
                 "http://localhost:3000/api/notifications/notify-event"
             )
