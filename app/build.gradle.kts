@@ -21,17 +21,17 @@ val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD") ?: 
 val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS") ?: "kampus_key"
 
 android {
-    namespace = "com.kampus.app"
+    namespace = "com.kampus.yal.app"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.kampus.app"
+        applicationId = "com.kampus.yal.app"
         minSdk = 24
         targetSdk = 37
-        versionCode = 7
-        versionName = "2.1.3"
+        versionCode = 8
+        versionName = "2.1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

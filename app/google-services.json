@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:127425575312:android:66254e7059a03a61679b15",
         "android_client_info": {
-          "package_name": "com.example.kampus"
+          "package_name": "com.kampus.yal.app"
         }
       },
       "oauth_client": [],
@@ -28,7 +28,26 @@
       "client_info": {
         "mobilesdk_app_id": "1:127425575312:android:a0aaa7c6ecec14a0679b15",
         "android_client_info": {
-          "package_name": "com.kampus.app"
+          "package_name": "com.kampus.yal.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgsiij4YcPEloh9RUiJeXFda371CwsPUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127425575312:android:50c1959212a6e745679b15",
+        "android_client_info": {
+          "package_name": "com.kampus.yal.app"
         }
       },
       "oauth_client": [],

@@ -6,7 +6,7 @@ SECTION 1 - APPLICATION DETAILS
 Kampus
 
 2. Package Name / Application ID
-com.kampus.app
+com.kampus.yal.app
 
 3. Application Type
 - App
@@ -24,7 +24,7 @@ godfreytrprof@gmail.com,kampus.tester1@gmail.com,kampus.tester2@gmail.com,kampus
 SECTION 2 - PLAY STORE LISTING
 
 7. Short Description
-Discover inter-college events, track registration deadlines, build teams, and earn certificates.
+Discover college events, track deadlines, build teams, and earn certificates.
 
 8. Full Description
 Kampus is the all-in-one inter-college event discovery, deadline management, student networking, and digital credentials platform designed for colleges and universities.
@@ -74,95 +74,105 @@ SECTION 3 - APPLICATION BUILD
 - Release Package (APK): app-release.apk (located at app/build/outputs/apk/release/app-release.apk)
 
 15. Version Name
-2.1.3
+2.1.4
 
 16. Version Code
-7
+8
 
-17. Has the final application been tested?
+17. Target SDK & Min SDK
+- Target SDK: 37 (Android 15)
+- Minimum SDK: 24 (Android 7.0)
+
+18. Has the final application been tested?
 - Yes
 
-18. Are the major application features working correctly?
+19. Are the major application features working correctly?
 - Yes (Verified full authentication, MongoDB Atlas live persistence, Cloudinary CDN media uploads, FCM push notifications, and release builds).
 
 
 SECTION 4 - PRIVACY AND DATA SAFETY
 
-19. Does the application collect user data?
+20. Does the application collect user data?
 - Yes
 
-20. Does the application share user data with third parties?
+21. Does the application share user data with third parties?
 - No
 
-21. What types of data does the application collect?
+22. What types of data does the application collect?
 - Personal information (Name, Email address, Phone number, College name, Department, Academic Year, User Role)
 - Photos / Media Storage (Profile pictures, event banners, certificate attachments uploaded to Cloudinary CDN)
 - Device information (Firebase Cloud Messaging device registration tokens)
 - App activity (Event registrations, team finder requests, direct chat messages, announcements)
 
-22. Privacy Policy URL
+23. Privacy Policy URL
 https://kampus-notification-server.onrender.com/privacy-policy
 (Fallback: https://theoriongd.github.io/kampus/privacy-policy.html)
 
-23. Can users request deletion of their data?
+24. Can users request deletion of their data?
 - Yes
 
-24. Does the application use third-party services or SDKs?
+25. Does the application use third-party services or SDKs?
 - Yes
 
-25. List the third-party services or SDKs used
-- MongoDB Atlas Cloud Database (MongoDB Java Sync Driver 4.11.1)
+26. List the third-party services or SDKs used
+- MongoDB Atlas Cloud Database (MongoDB Java Sync Driver 5.3.1)
 - Cloudinary Image CDN (Cloudinary REST API & Unsigned Upload Preset)
-- Firebase Cloud Messaging (FCM Push Notifications SDK)
-- Coil Compose (2.6.0 Async Image Loader)
+- Firebase Cloud Messaging (FCM Push Notifications SDK via firebase-bom 33.9.0)
+- Coil Compose (2.7.0 Async Image Loader)
 - Google Gson (2.10.1 JSON Parser)
+- AndroidX WorkManager (2.9.1 Work Runtime KTX)
+- Core Library Desugaring (2.1.4 JDK Libs)
 
 
 SECTION 5 - ADS AND PERMISSIONS
 
-26. Does the application contain advertisements?
+27. Does the application contain advertisements?
 - No
 
-27. Does the application request sensitive or special permissions?
+28. Does the application request sensitive or special permissions?
 - Yes
 
-28. Permissions used by the application
+29. Permissions used by the application
 - Notifications (android.permission.POST_NOTIFICATIONS)
 - Calendar / Alarms (android.permission.SCHEDULE_EXACT_ALARM, android.permission.USE_EXACT_ALARM)
 - Boot Receiver (android.permission.RECEIVE_BOOT_COMPLETED)
 - Internet (android.permission.INTERNET)
-- SMS (android.permission.SEND_SMS)
+- Network State (android.permission.ACCESS_NETWORK_STATE)
+- SMS (android.permission.SEND_SMS, android.permission.READ_SMS, android.permission.RECEIVE_SMS)
+- Foreground Service (android.permission.FOREGROUND_SERVICE, android.permission.FOREGROUND_SERVICE_DATA_SYNC)
 
-29. Explain why these permissions are required
-- POST_NOTIFICATIONS: Required to deliver realtime FCM notifications to students regarding newly published college events, deadline reminders, and direct messages.
+30. Explain why these permissions are required
+- POST_NOTIFICATIONS: Required to deliver realtime FCM notifications to students regarding newly published college events, deadline reminders, and direct messages (Android 13+).
 - SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM: Required to schedule precise deadline alarms and calendar reminders even when the app is running in the background.
 - RECEIVE_BOOT_COMPLETED: Required to re-register active deadline alarms when the user's device reboots.
 - INTERNET: Required for secure communication with MongoDB Atlas cloud database, Cloudinary CDN media server, and FCM push servers.
-- SEND_SMS: Used as an optional direct contact method with event coordinators.
+- ACCESS_NETWORK_STATE: Required to check network connectivity before attempting cloud database synchronization.
+- SEND_SMS / READ_SMS / RECEIVE_SMS: Used as an optional direct contact method with event coordinators.
+- FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC: Required for running background event data synchronization workers and push notification handlers.
 
 
 SECTION 6 - TARGET AUDIENCE AND CONTENT
 
-30. Target Audience
+31. Target Audience
 - Teenagers
 - Adults
 
-31. Does the application contain content that may require age restrictions?
+32. Does the application contain content that may require age restrictions?
 - No
 
-32. Does the application contain user-generated content?
+33. Does the application contain user-generated content?
 - Yes (Event posts, team recruitment messages, student bios, uploaded profile & certificate media)
 
-33. Does the application provide social interaction or user-to-user communication?
+34. Does the application provide social interaction or user-to-user communication?
 - Yes (Direct user-to-user chat, team finder requests)
 
 
 SECTION 7 - REVIEWER ACCESS
 
-34. Does the application require login?
+35. Does the application require login?
 - Yes (All reviewer test accounts have been seeded and verified live in the MongoDB Atlas database).
 
-35. Test Account Credentials for Reviewers
+36. Test Account Credentials for Reviewers
 
 a) Super Admin Account:
 - Email: admin@kampus.com (or admin@kampus.edu)
@@ -186,13 +196,13 @@ d) Student Account 1:
 
 e) Student Account 2:
 - Email: student2@kampus.edu
-- Password: student2@husky/student123 (Password: student123)
+- Password: student123
 - Access: Peer student profile, team request responder, messaging partner.
 
-36. OTP / PIN / Special Access Instructions
+37. OTP / PIN / Special Access Instructions
 The application supports direct email & password authentication without requiring two-factor SMS OTP or hardware tokens. Reviewers can sign in using any of the role credentials above.
 
-37. Step-by-Step Reviewer Guide
+38. Step-by-Step Reviewer Guide
 1. Launch the Kampus app. The login screen presents clear fields for Email and Password.
 2. Sign in as Student (`student1@kampus.edu` / `student123`).
 3. In the Home Tab: View live events fetched from MongoDB Atlas. Tap an event to read full details, view Cloudinary-hosted banners, or register.
@@ -203,10 +213,11 @@ The application supports direct email & password authentication without requirin
 
 SECTION 8 - FINAL CONFIRMATION
 
-38. Application Readiness Checklist
+39. Application Readiness Checklist
 - Final application build is ready (APK & AAB generated)
 - Final AAB file ready at app/build/outputs/bundle/release/app-release.aab
-- Version Code set to 7 and Version Name set to 2.1.3
+- Version Code set to 8 and Version Name set to 2.1.4
+- Target SDK set to 37 and Min SDK set to 24
 - Live database persistence verified with MongoDB Atlas
 - Cloudinary CDN media uploads verified
 - Push notification server verified
@@ -214,8 +225,8 @@ SECTION 8 - FINAL CONFIRMATION
 - App icon and graphics ready
 - Privacy Policy is live
 
-39. Pending Issues / Comments
-None. The codebase is fully synchronized with live MongoDB Atlas database storage, Cloudinary CDN asset uploads, FCM notification services, and signed release artifacts (`versionCode 7`, `versionName 2.1.3`).
+40. Pending Issues / Comments
+None. The codebase is fully synchronized with live MongoDB Atlas database storage, Cloudinary CDN asset uploads, FCM notification services, and signed release artifacts (`versionCode 8`, `versionName 2.1.4`).
 
-40. Final Confirmation
+41. Final Confirmation
 I confirm that the information and files submitted are accurate, tested, and ready for Google Play Store publication and review.

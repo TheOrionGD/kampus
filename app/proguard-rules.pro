@@ -10,4 +10,4 @@
 # Retrofit / Gson / Coil
 -keepattributes Signature
 -keepattributes *Annotation*
--keep class com.kampus.app.models.** { *; }
+-keep class com.kampus.yal.app.models.** { *; }
