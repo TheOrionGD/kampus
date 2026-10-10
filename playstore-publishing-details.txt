@@ -6,7 +6,7 @@ SECTION 1 - APPLICATION DETAILS
 Kampus
 
 2. Package Name / Application ID
-com.example.kampus
+com.kampus.app
 
 3. Application Type
 - App

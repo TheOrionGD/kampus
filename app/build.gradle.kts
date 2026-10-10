@@ -21,13 +21,13 @@ val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD") ?: 
 val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS") ?: "kampus_key"
 
 android {
-    namespace = "com.example.kampus"
+    namespace = "com.kampus.app"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.kampus"
+        applicationId = "com.kampus.app"
         minSdk = 24
         targetSdk = 37
         versionCode = 7
