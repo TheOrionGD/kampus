@@ -74,10 +74,10 @@ SECTION 3 - APPLICATION BUILD
 - Release Package (APK): app-release.apk (located at app/build/outputs/apk/release/app-release.apk)
 
 15. Version Name
-2.1.4
+2.1.5
 
 16. Version Code
-8
+9
 
 17. Target SDK & Min SDK
 - Target SDK: 37 (Android 15)
@@ -138,7 +138,6 @@ SECTION 5 - ADS AND PERMISSIONS
 - Boot Receiver (android.permission.RECEIVE_BOOT_COMPLETED)
 - Internet (android.permission.INTERNET)
 - Network State (android.permission.ACCESS_NETWORK_STATE)
-- SMS (android.permission.SEND_SMS, android.permission.READ_SMS, android.permission.RECEIVE_SMS)
 - Foreground Service (android.permission.FOREGROUND_SERVICE, android.permission.FOREGROUND_SERVICE_DATA_SYNC)
 
 30. Explain why these permissions are required
@@ -147,7 +146,6 @@ SECTION 5 - ADS AND PERMISSIONS
 - RECEIVE_BOOT_COMPLETED: Required to re-register active deadline alarms when the user's device reboots.
 - INTERNET: Required for secure communication with MongoDB Atlas cloud database, Cloudinary CDN media server, and FCM push servers.
 - ACCESS_NETWORK_STATE: Required to check network connectivity before attempting cloud database synchronization.
-- SEND_SMS / READ_SMS / RECEIVE_SMS: Used as an optional direct contact method with event coordinators.
 - FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC: Required for running background event data synchronization workers and push notification handlers.
 
 
@@ -216,7 +214,7 @@ SECTION 8 - FINAL CONFIRMATION
 39. Application Readiness Checklist
 - Final application build is ready (APK & AAB generated)
 - Final AAB file ready at app/build/outputs/bundle/release/app-release.aab
-- Version Code set to 8 and Version Name set to 2.1.4
+- Version Code set to 9 and Version Name set to 2.1.5
 - Target SDK set to 37 and Min SDK set to 24
 - Live database persistence verified with MongoDB Atlas
 - Cloudinary CDN media uploads verified
@@ -226,7 +224,7 @@ SECTION 8 - FINAL CONFIRMATION
 - Privacy Policy is live
 
 40. Pending Issues / Comments
-None. The codebase is fully synchronized with live MongoDB Atlas database storage, Cloudinary CDN asset uploads, FCM notification services, and signed release artifacts (`versionCode 8`, `versionName 2.1.4`).
+None. The codebase is fully synchronized with live MongoDB Atlas database storage, Cloudinary CDN asset uploads, FCM notification services, and signed release artifacts (`versionCode 9`, `versionName 2.1.5`).
 
 41. Final Confirmation
 I confirm that the information and files submitted are accurate, tested, and ready for Google Play Store publication and review.

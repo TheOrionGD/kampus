@@ -65,14 +65,6 @@ fun PermissionsScreen(
                 isSystemNormal = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
             ),
             AppPermissionItem(
-                id = "sms",
-                title = "SMS Communications",
-                subtitle = "Send emergency campus alerts and team invitations directly to teammates",
-                icon = "📱",
-                permissionManifest = Manifest.permission.SEND_SMS,
-                isSystemNormal = false
-            ),
-            AppPermissionItem(
                 id = "alarms",
                 title = "Exact Reminders & Deadlines",
                 subtitle = "Trigger background alarms before event registrations and project submissions close",
